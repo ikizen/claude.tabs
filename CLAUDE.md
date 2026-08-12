@@ -2,23 +2,37 @@
 
 **Repository**: claude.tabs
 **Owner**: ikizen
-**Last Updated**: 2026-01-21
+**Last Updated**: 2026-08-12
 
 ## Project Overview
 
-This is the `claude.tabs` project - a repository currently in its initial stages. This document serves as a comprehensive guide for AI assistants (like Claude) to understand the codebase structure, development workflows, and key conventions.
+This repository holds **amo-analytics**: a personal analytics tool that pulls calls and leads
+out of amoCRM into SQLite, then delivers a daily summary via Telegram (plus a Google Sheet for
+manual slicing). Full spec, API quirks, data model, and stage-by-stage plan: **[docs/PLAN.md](docs/PLAN.md)**.
+
+Read `docs/PLAN.md` section 0 before touching this codebase — it has binding rules (no invented
+endpoints, no mock data, Stage 0 recon is blocking, secrets only via env vars, no magic numbers).
 
 ## Current State
 
-**Status**: Initial repository setup
+**Status**: Stage 0 (recon) scaffolded — `scripts/probe.py` is written but has not yet been run
+against a real amoCRM account. Per PLAN.md rule 2, the collector, DB schema population, and
+reports must not be built until probe.py's output confirms real call data exists.
 **Branch Strategy**: Feature branches prefixed with `claude/`
 
 ### Repository Structure
 
 ```
 claude.tabs/
-├── .git/           # Git version control
-└── CLAUDE.md       # This file
+├── CLAUDE.md              # this file
+├── README.md
+├── docs/PLAN.md            # full project plan — read first
+├── .env.example
+├── requirements.txt
+├── src/
+│   ├── config.py           # env-var config, no hardcoded thresholds
+│   └── amo_client.py       # amoCRM API v4 client: auth, throttle, retry, pagination
+└── scripts/probe.py        # Stage 0 recon — read-only, prints a report, writes nothing
 ```
 
 ## Development Workflows
