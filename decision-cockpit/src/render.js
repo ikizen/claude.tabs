@@ -78,9 +78,20 @@ function emptyState(message) {
 function kpiTile(label, value, caption) {
   const card = el('div', { class: 'kpi-card eval-neutral' });
   card.appendChild(el('div', { class: 'kpi-label', text: label }));
-  card.appendChild(el('div', { class: 'kpi-value', text: value }));
+  const valueEl = el('div', { class: 'kpi-value' });
+  if (value instanceof Node) valueEl.appendChild(value);
+  else valueEl.textContent = value;
+  card.appendChild(valueEl);
   if (caption) card.appendChild(el('div', { class: 'kpi-caption', text: caption }));
   return card;
+}
+
+// Значение уже пришло как готовая дельта (доля), а не как множитель год-к-году.
+function deltaBadge(fraction) {
+  if (typeof fraction !== 'number') return el('span', { text: '—' });
+  const pct = fraction * 100;
+  const up = pct >= 0;
+  return el('span', { class: `trend-badge ${up ? 'trend-up' : 'trend-down'}`, text: `${up ? '+' : ''}${pct.toFixed(1)}%` });
 }
 
 // ---- Обзор ----
@@ -880,6 +891,436 @@ export function renderDataQuality(container, data) {
       : `Позиции с этими флагами выведены из автоматических решений. Суммарно это ${fmtNumber(totalPositions)} позиций на ${fmtMoney(totalStock)}.`;
   view.appendChild(el('div', { class: 'plaque', text: plaqueText }));
 
+  container.appendChild(view);
+}
+
+// ---- Недельная динамика ----
+
+const WEEKLY_COLUMNS = [
+  'Неделя',
+  'Период',
+  'Выручка',
+  'Вал_маржа',
+  'Маржинность',
+  'Продано_шт',
+  'Документов',
+  'Средний_чек',
+  'ДельтаВыручка_WoW',
+  'ДельтаВыручка_YoY',
+];
+
+export function renderWeekly(container, data) {
+  container.innerHTML = '';
+  const view = el('div', { class: 'view' });
+  view.appendChild(el('h2', { text: 'Недельная динамика' }));
+
+  if (data.weekly.length === 0) {
+    view.appendChild(emptyState('Нет данных.'));
+    container.appendChild(view);
+    return;
+  }
+
+  const categories = [...new Set(data.weekly.map((r) => r['Категория']).filter(Boolean))];
+  const orderedCats = categories.includes('ALL')
+    ? ['ALL', ...categories.filter((c) => c !== 'ALL').sort()]
+    : categories.sort();
+
+  const toolbar = el('div', { class: 'toolbar' });
+  const catSelect = el(
+    'select',
+    { class: 'filter-select' },
+    orderedCats.map((c) => el('option', { value: c, text: c === 'ALL' ? 'Все категории (итого)' : c }))
+  );
+  const depthSelect = el('select', { class: 'filter-select' }, [
+    el('option', { value: '8', text: 'последние 8 недель' }),
+    el('option', { value: '13', text: 'последние 13 недель' }),
+    el('option', { value: '26', text: 'последние 26 недель' }),
+    el('option', { value: '0', text: 'весь период' }),
+  ]);
+  toolbar.append(catSelect, depthSelect);
+  view.appendChild(toolbar);
+
+  const cardsHost = el('div', { class: 'kpi-grid' });
+  view.appendChild(cardsHost);
+
+  view.appendChild(el('h3', { text: 'По неделям' }));
+  const tableHost = el('div');
+  view.appendChild(tableHost);
+
+  function draw() {
+    const cat = catSelect.value;
+    const rows = [...data.weekly]
+      .filter((r) => r['Категория'] === cat)
+      .sort((a, b) => String(a['Неделя']).localeCompare(String(b['Неделя'])));
+    const depth = Number(depthSelect.value);
+    const visible = depth > 0 ? rows.slice(-depth) : rows;
+    const chronoDesc = [...visible].reverse();
+    const latest = chronoDesc[0];
+
+    cardsHost.innerHTML = '';
+    if (latest) {
+      cardsHost.appendChild(kpiTile('Выручка, последняя неделя', fmtMoney(latest['Выручка']), latest['Период'] ?? ''));
+      cardsHost.appendChild(kpiTile('Вал. маржа', fmtMoney(latest['Вал_маржа']), latest['Неделя'] ?? ''));
+      cardsHost.appendChild(kpiTile('Δ выручки к прошлой неделе', deltaBadge(latest['ДельтаВыручка_WoW']), ''));
+      cardsHost.appendChild(kpiTile('Δ выручки год к году', deltaBadge(latest['ДельтаВыручка_YoY']), 'та же неделя прошлого года'));
+    } else {
+      cardsHost.appendChild(emptyState('Нет недель для этого фильтра.'));
+    }
+
+    tableHost.innerHTML = '';
+    tableHost.appendChild(
+      buildSortableTable(WEEKLY_COLUMNS, chronoDesc, {
+        renderCell: (col, value) => {
+          if (['Выручка', 'Вал_маржа', 'Средний_чек'].includes(col)) return el('td', { text: fmtMoney(value) });
+          if (col === 'Маржинность') return el('td', { text: fmtPercent(value) });
+          if (col.startsWith('Дельта')) return el('td', {}, deltaBadge(value));
+          return el('td', { text: typeof value === 'number' ? fmtNumber(value) : value ?? '' });
+        },
+      })
+    );
+  }
+
+  catSelect.addEventListener('change', draw);
+  depthSelect.addEventListener('change', draw);
+  draw();
+
+  container.appendChild(view);
+}
+
+// ---- Сравнение · месяц / неделя ----
+// Транспонированная таблица: строки — метрики, столбцы — периоды (динамические,
+// определяются по заголовкам колонок в формате YYYY-MM или YYYY-Www).
+// Дельта к соседнему периоду — тривиальная арифметика на уже данных числах,
+// считается в браузере (не бизнес-решение, просто отображение).
+
+const METRIC_FORMAT = {
+  'Чеков': 'count',
+  'Средний чек': 'money',
+  'Выручка': 'money',
+  'Валовая маржа': 'money',
+  'Маржинальность': 'percent',
+};
+
+function formatMetricValue(metric, value) {
+  const kind = METRIC_FORMAT[metric] || 'count';
+  if (kind === 'money') return fmtMoney(value);
+  if (kind === 'percent') return fmtPercent(value);
+  return fmtNumber(value);
+}
+
+function renderComparisonTable(container, rows, title, emptyMessage) {
+  container.innerHTML = '';
+  const view = el('div', { class: 'view' });
+  view.appendChild(el('h2', { text: title }));
+
+  if (rows.length === 0) {
+    view.appendChild(emptyState(emptyMessage));
+    container.appendChild(view);
+    return;
+  }
+
+  const allColumns = Object.keys(rows[0]);
+  const metricCol = allColumns[0];
+  const periodCols = allColumns.slice(1);
+
+  const table = el('table', { class: 'data-table cmp-table' });
+  const thead = el(
+    'thead',
+    {},
+    el('tr', {}, [el('th', { text: metricCol }), ...periodCols.map((p) => el('th', { text: p }))])
+  );
+  const tbody = el('tbody');
+
+  rows.forEach((row) => {
+    const tr = el('tr');
+    tr.appendChild(el('td', { 'data-label': metricCol, class: 'cmp-metric', text: row[metricCol] ?? '' }));
+    periodCols.forEach((period, idx) => {
+      const value = row[period];
+      const prevPeriod = periodCols[idx - 1];
+      const prevValue = prevPeriod !== undefined ? row[prevPeriod] : null;
+      const cell = el('td', { 'data-label': period });
+      cell.appendChild(document.createTextNode(formatMetricValue(row[metricCol], value)));
+      if (typeof value === 'number' && typeof prevValue === 'number' && prevValue !== 0) {
+        cell.appendChild(deltaBadge((value - prevValue) / Math.abs(prevValue)));
+      }
+      tr.appendChild(cell);
+    });
+    tbody.appendChild(tr);
+  });
+
+  table.append(thead, tbody);
+  view.appendChild(el('div', { class: 'table-scroll' }, table));
+  container.appendChild(view);
+}
+
+export function renderMonthCmp(container, data) {
+  renderComparisonTable(container, data.monthcmp, 'Сравнение · месяц', 'Нет данных.');
+}
+
+export function renderWeekCmp(container, data) {
+  renderComparisonTable(container, data.weekcmp, 'Сравнение · неделя', 'Нет данных.');
+}
+
+// ---- Закуп ----
+// Иерархия Категория → Подкатегория. Месячные колонки определяются динамически
+// по названиям вида Расход_YYYY-MM / Остаток_YYYY-MM.
+
+function monthColumnsOf(row) {
+  const months = new Set();
+  Object.keys(row).forEach((key) => {
+    const m = key.match(/^(?:Расход|Остаток)_(\d{4}-\d{2})$/);
+    if (m) months.add(m[1]);
+  });
+  return [...months].sort();
+}
+
+function procurementRowCell(month, row) {
+  const spend = row[`Расход_${month}`];
+  const stock = row[`Остаток_${month}`];
+  const cell = el('td', { class: 'proc-month', 'data-label': month });
+  cell.appendChild(el('div', { class: 'proc-spend', text: typeof spend === 'number' ? fmtNumber(spend) : '—' }));
+  cell.appendChild(el('div', { class: 'proc-stock', text: typeof stock === 'number' ? fmtNumber(stock) : '—' }));
+  return cell;
+}
+
+const ABC_CLASS = { A: 'abc-a', B: 'abc-b', C: 'abc-c' };
+
+function abcBadge(cls) {
+  return el('span', { class: `badge ${ABC_CLASS[cls] || 'abc-c'}`, text: cls ?? '—' });
+}
+
+function buyBadge(value) {
+  const yes = String(value).toLowerCase() === 'да';
+  return el('span', { class: `badge ${yes ? 'buy-yes' : 'buy-no'}`, text: value ?? '—' });
+}
+
+function renderProcurementRow(row, months, depth, isCategory) {
+  const tr = el('tr', { class: `tree-table-row depth-${depth}` });
+  const labelCell = el('td', { class: 'proc-label', 'data-label': isCategory ? 'Категория' : 'Подкатегория' });
+  if (!isCategory) {
+    labelCell.appendChild(el('span', { class: 'tree-toggle-spacer' }));
+  }
+  labelCell.appendChild(el('span', { text: isCategory ? row['Категория'] : row['Подкатегория'] }));
+  tr.appendChild(labelCell);
+  months.forEach((m) => tr.appendChild(procurementRowCell(m, row)));
+  tr.appendChild(el('td', { 'data-label': 'Закупать' }, buyBadge(row['Закупать'])));
+  tr.appendChild(el('td', { 'data-label': 'Сезон', text: row['Сезон'] ?? '' }));
+  tr.appendChild(el('td', { 'data-label': 'Норма, мес', text: typeof row['Норма_мес'] === 'number' ? fmtNumber(row['Норма_мес']) : '' }));
+  tr.appendChild(el('td', { 'data-label': 'Заказ, шт', text: typeof row['Заказ_шт'] === 'number' ? fmtNumber(row['Заказ_шт']) : '' }));
+  tr.appendChild(el('td', { 'data-label': 'Класс' }, abcBadge(row['Класс_ABC'])));
+  return tr;
+}
+
+export function renderProcurement(container, data) {
+  container.innerHTML = '';
+  const view = el('div', { class: 'view' });
+  view.appendChild(el('h2', { text: 'Закуп' }));
+
+  if (data.procurement.length === 0) {
+    view.appendChild(emptyState('Нет данных.'));
+    container.appendChild(view);
+    return;
+  }
+
+  const months = monthColumnsOf(data.procurement[0]);
+  const categoryRows = data.procurement.filter((r) => !r['Подкатегория']);
+  const subRowsByCategory = new Map();
+  data.procurement
+    .filter((r) => r['Подкатегория'])
+    .forEach((r) => {
+      const list = subRowsByCategory.get(r['Категория']) || [];
+      list.push(r);
+      subRowsByCategory.set(r['Категория'], list);
+    });
+
+  const table = el('table', { class: 'data-table proc-table' });
+  const thead = el(
+    'thead',
+    {},
+    el('tr', {}, [
+      el('th', { text: 'Категория / Подкатегория' }),
+      ...months.map((m) => el('th', { text: m })),
+      el('th', { text: 'Закупать' }),
+      el('th', { text: 'Сезон' }),
+      el('th', { text: 'Норма, мес' }),
+      el('th', { text: 'Заказ, шт' }),
+      el('th', { text: 'Класс' }),
+    ])
+  );
+  const tbody = el('tbody');
+
+  categoryRows.forEach((catRow) => {
+    const catTr = renderProcurementRow(catRow, months, 0, true);
+    const subs = subRowsByCategory.get(catRow['Категория']) || [];
+    if (subs.length > 0) {
+      catTr.querySelector('.proc-label').prepend(el('button', { class: 'tree-toggle', text: '›' }));
+      catTr.classList.add('proc-parent');
+    }
+    tbody.appendChild(catTr);
+    subs.forEach((sub) => {
+      const subTr = renderProcurementRow(sub, months, 1, false);
+      subTr.classList.add('proc-child', 'proc-hidden');
+      tbody.appendChild(subTr);
+    });
+    if (subs.length > 0) {
+      catTr.addEventListener('click', () => {
+        catTr.classList.toggle('expanded');
+        let sibling = catTr.nextElementSibling;
+        while (sibling && sibling.classList.contains('proc-child')) {
+          sibling.classList.toggle('proc-hidden');
+          sibling = sibling.nextElementSibling;
+        }
+      });
+    }
+  });
+
+  table.append(thead, tbody);
+  view.appendChild(el('div', { class: 'table-scroll' }, table));
+  view.appendChild(
+    el('div', {
+      class: 'plaque',
+      text: 'Класс A — держим наличие всегда, B — по плану, C — под заказ или вывод из ассортимента.',
+    })
+  );
+
+  container.appendChild(view);
+}
+
+// ---- Задачи (канбан) ----
+
+const TASK_COLUMNS = ['Предложено', 'К работе', 'В работе', 'Готово'];
+const TASK_PRIORITY_CLASS = { 'высокий': 'risk-high', 'средний': 'risk-mid', 'низкий': 'risk-low' };
+const TASKS_STORAGE_KEY = 'decision-cockpit:tasks-state';
+
+function taskId(row, index) {
+  return `${index}:${String(row['Задача'] ?? '').slice(0, 40)}`;
+}
+
+function loadTasksState() {
+  try {
+    return JSON.parse(localStorage.getItem(TASKS_STORAGE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveTasksState(state) {
+  try {
+    localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // localStorage недоступен — состояние доски просто не сохранится между визитами
+  }
+}
+
+export function renderTasks(container, data) {
+  container.innerHTML = '';
+  const view = el('div', { class: 'view' });
+  view.appendChild(el('h2', { text: 'Задачи' }));
+
+  if (data.tasks.length === 0) {
+    view.appendChild(emptyState('Нет данных.'));
+    container.appendChild(view);
+    return;
+  }
+
+  const state = loadTasksState();
+  const items = data.tasks.map((row, index) => {
+    const id = taskId(row, index);
+    const savedColumn = state[id]?.column;
+    return { row, id, column: savedColumn && TASK_COLUMNS.includes(savedColumn) ? savedColumn : row['Колонка'] };
+  });
+
+  const progressHost = el('div', { class: 'kanban-progress' });
+  view.appendChild(progressHost);
+
+  const board = el('div', { class: 'kanban' });
+  view.appendChild(board);
+
+  let dragId = null;
+
+  function persist() {
+    const next = {};
+    items.forEach((item) => {
+      next[item.id] = { column: item.column };
+    });
+    saveTasksState(next);
+  }
+
+  function draw() {
+    progressHost.innerHTML = '';
+    const total = items.length;
+    const done = items.filter((i) => i.column === 'Готово').length;
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    progressHost.appendChild(el('div', { class: 'progress-track' }, el('div', { class: 'progress-fill', style: `width:${pct}%` })));
+    progressHost.appendChild(el('div', { class: 'progress-text', text: `Готово ${done} из ${total} задач · ${pct}%` }));
+
+    board.innerHTML = '';
+    TASK_COLUMNS.forEach((col) => {
+      const colItems = items.filter((i) => i.column === col);
+      const colEl = el('div', { class: 'kcol' });
+      colEl.dataset.col = col;
+      const head = el('div', { class: 'kcol-head' }, [
+        el('span', { text: col }),
+        el('span', { class: 'kcol-count', text: String(colItems.length) }),
+      ]);
+      colEl.appendChild(head);
+      const cardsHost = el('div', { class: 'kcards' });
+      colItems.forEach((item) => cardsHost.appendChild(taskCard(item)));
+      colEl.appendChild(cardsHost);
+
+      colEl.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        colEl.classList.add('over');
+      });
+      colEl.addEventListener('dragleave', () => colEl.classList.remove('over'));
+      colEl.addEventListener('drop', (e) => {
+        e.preventDefault();
+        colEl.classList.remove('over');
+        const item = items.find((i) => i.id === dragId);
+        if (item) {
+          item.column = col;
+          persist();
+          draw();
+        }
+      });
+
+      board.appendChild(colEl);
+    });
+  }
+
+  function taskCard(item) {
+    const card = el('div', { class: 'kcard', draggable: 'true' });
+    card.addEventListener('dragstart', () => {
+      dragId = item.id;
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+
+    const priorityClass = TASK_PRIORITY_CLASS[item.row['Приоритет']] || 'risk-mid';
+    card.appendChild(el('div', { class: `kcard-priority ${priorityClass}` }));
+    card.appendChild(el('div', { class: 'kcard-title', text: item.row['Задача'] ?? '' }));
+    const meta = el('div', { class: 'kcard-meta' });
+    if (item.row['Кто']) meta.appendChild(el('span', { text: item.row['Кто'] }));
+    if (item.row['Срок']) meta.appendChild(el('span', { text: item.row['Срок'] }));
+    card.appendChild(meta);
+    if (item.row['Комментарий']) card.appendChild(el('div', { class: 'kcard-comment', text: item.row['Комментарий'] }));
+
+    const doneRow = el('label', { class: 'task' });
+    const checkbox = el('input', { type: 'checkbox' });
+    checkbox.checked = item.column === 'Готово';
+    checkbox.addEventListener('change', () => {
+      item.column = checkbox.checked ? 'Готово' : 'К работе';
+      persist();
+      draw();
+    });
+    doneRow.appendChild(checkbox);
+    doneRow.appendChild(el('span', { text: 'Готово' }));
+    card.appendChild(doneRow);
+
+    return card;
+  }
+
+  draw();
   container.appendChild(view);
 }
 

@@ -29,6 +29,36 @@
   --risk-high: #dc2626;
 }
 
+:root[data-theme='dark'] {
+  --bg: #0b1520;
+  --surface: #101d2c;
+  --border: #1e3149;
+  --text: #e7edf5;
+  --text-muted: #8fa3bd;
+  --accent: #46dee1;
+  --accent-hover: #6ee9eb;
+}
+
+:root[data-theme='dark'] .warning-box {
+  background: #2a1f0d;
+  border-color: #5a4315;
+}
+
+:root[data-theme='dark'] .warning-title,
+:root[data-theme='dark'] .warning-box ul {
+  color: #f4c063;
+}
+
+:root[data-theme='dark'] .plaque {
+  background: #0f2540;
+  border-color: #1f4266;
+  color: #bcd6f2;
+}
+
+:root[data-theme='dark'] .dropzone.dragover {
+  background: #10283f;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -40,6 +70,27 @@ html, body {
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.theme-toggle {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--accent);
 }
 
 #app {
@@ -838,6 +889,288 @@ main#views {
   background: var(--status-bundle);
 }
 
+.kpi-value .trend-badge {
+  font-size: 15px;
+  padding: 3px 10px;
+}
+
+/* Сравнение месяц/неделя — транспонированная таблица */
+
+.cmp-table td {
+  white-space: nowrap;
+}
+
+.cmp-table .cmp-metric {
+  font-weight: 600;
+  background: var(--bg);
+}
+
+.cmp-table td .trend-badge {
+  margin-left: 6px;
+}
+
+/* Закуп */
+
+.proc-table th,
+.proc-table td {
+  white-space: nowrap;
+}
+
+.proc-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  text-align: left;
+  min-width: 220px;
+}
+
+.proc-parent {
+  cursor: pointer;
+}
+
+.proc-parent .tree-toggle {
+  transition: transform 0.2s ease;
+}
+
+.proc-parent.expanded .tree-toggle {
+  transform: rotate(90deg);
+}
+
+.proc-child .proc-label {
+  padding-left: 28px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.proc-hidden {
+  display: none;
+}
+
+.proc-month {
+  text-align: right;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.proc-spend {
+  color: var(--text);
+}
+
+.proc-stock {
+  color: var(--text-muted);
+}
+
+.badge.buy-yes {
+  background: var(--eval-good);
+}
+
+.badge.buy-no {
+  background: var(--status-default);
+}
+
+.badge.abc-a {
+  background: var(--eval-good);
+}
+
+.badge.abc-b {
+  background: var(--status-discount);
+}
+
+.badge.abc-c {
+  background: var(--status-default);
+}
+
+/* Задачи · канбан */
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.task input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  margin: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  background: transparent;
+}
+
+.task input[type='checkbox']:checked {
+  background: var(--eval-good);
+  border-color: var(--eval-good);
+}
+
+.task input[type='checkbox']:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.task span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.kanban-progress {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.progress-track {
+  flex: 1;
+  max-width: 320px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--eval-good);
+  transition: width 0.25s ease;
+}
+
+.progress-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.kcol {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kcol.over {
+  border-color: var(--accent);
+  background: rgba(70, 222, 225, 0.06);
+}
+
+.kcol-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.kcards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kcard {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: grab;
+  position: relative;
+  padding-left: 16px;
+}
+
+.kcard.dragging {
+  opacity: 0.4;
+}
+
+.kcard-priority {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+}
+
+.kcard-priority.risk-low {
+  background: var(--risk-low);
+}
+
+.kcard-priority.risk-mid {
+  background: var(--risk-mid);
+}
+
+.kcard-priority.risk-high {
+  background: var(--risk-high);
+}
+
+.kcard-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.kcard-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.kcard-comment {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.kcard .task {
+  padding: 0;
+  gap: 8px;
+}
+
+.kcard .task span {
+  font-size: 12px;
+}
+
+@media (max-width: 1024px) {
+  .kanban {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .kanban {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Нижняя навигация на мобильном */
 
 @media (max-width: 767px) {
@@ -906,6 +1239,14 @@ main#views {
     padding: 12px 14px;
     background: var(--surface);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .data-table tr.proc-hidden {
+    display: none;
+  }
+
+  .proc-child .proc-label {
+    padding-left: 0;
   }
 
   .data-table td {

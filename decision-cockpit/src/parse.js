@@ -19,6 +19,11 @@ const SECTION_HEADING_KEYWORDS = {
   clients: ['клиенты'],
   retention: ['удержание', 'отток'],
   dataquality: ['качество данных'],
+  weekly: ['недельн'],
+  monthcmp: [['сравнение', 'месяц']],
+  weekcmp: [['сравнение', 'недел']],
+  procurement: ['закуп'],
+  tasks: ['задач', 'канбан'],
   narrative: ['повествован', 'методик'],
 };
 
@@ -86,7 +91,10 @@ function findByHeadingFallback(md, id) {
 
   for (const heading of headings) {
     const titleLower = heading.title.toLowerCase();
-    if (keywords.some((kw) => titleLower.includes(kw))) {
+    const matches = keywords.some((kw) =>
+      Array.isArray(kw) ? kw.every((part) => titleLower.includes(part)) : titleLower.includes(kw)
+    );
+    if (matches) {
       const nextIndex = headings.find((h) => h.index > heading.index)?.index ?? md.length;
       return md.slice(heading.end, nextIndex);
     }
@@ -130,6 +138,11 @@ const TABLE_SECTIONS = [
   'clients',
   'retention',
   'dataquality',
+  'weekly',
+  'monthcmp',
+  'weekcmp',
+  'procurement',
+  'tasks',
 ];
 
 export function parseReport(md) {
@@ -148,6 +161,11 @@ export function parseReport(md) {
     clients: [],
     retention: [],
     dataquality: [],
+    weekly: [],
+    monthcmp: [],
+    weekcmp: [],
+    procurement: [],
+    tasks: [],
     narrative: '',
     warnings,
     missingSections: [],

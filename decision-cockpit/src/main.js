@@ -10,6 +10,11 @@ import {
   renderModels,
   renderClients,
   renderDataQuality,
+  renderWeekly,
+  renderMonthCmp,
+  renderWeekCmp,
+  renderProcurement,
+  renderTasks,
   renderNarrative,
 } from './render.js';
 
@@ -17,6 +22,37 @@ const topbar = document.querySelector('.topbar');
 const tabsNav = document.getElementById('tabs');
 const viewsHost = document.getElementById('views');
 const reportMetaHost = document.getElementById('report-meta');
+const themeToggle = document.getElementById('theme-toggle');
+
+const THEME_KEY = 'decision-cockpit:theme';
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+
+function initTheme() {
+  let stored = null;
+  try {
+    stored = localStorage.getItem(THEME_KEY);
+  } catch {
+    stored = null;
+  }
+  const theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  applyTheme(theme);
+}
+
+themeToggle.addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  try {
+    localStorage.setItem(THEME_KEY, next);
+  } catch {
+    // localStorage недоступен (приватный режим и т.п.) — тема просто не запомнится
+  }
+});
+
+initTheme();
 
 let currentData = null;
 let currentFilename = '';
@@ -26,14 +62,19 @@ let activeTab = 'upload';
 const TAB_DEFS = [
   { id: 'overview', label: 'Обзор', always: true },
   { id: 'actions7d', label: 'Действия', always: true },
+  { id: 'weekly', label: 'Недели', dataKey: 'weekly' },
   { id: 'forecast', label: 'Прогноз', dataKey: 'forecast' },
   { id: 'newitems', label: 'Новинки', dataKey: 'newitems' },
+  { id: 'monthcmp', label: 'Сравнение · месяц', dataKey: 'monthcmp' },
+  { id: 'weekcmp', label: 'Сравнение · неделя', dataKey: 'weekcmp' },
   { id: 'deficit', label: 'Дефицит', always: true },
+  { id: 'procurement', label: 'Закуп', dataKey: 'procurement' },
   { id: 'categories', label: 'Категории', always: true },
   { id: 'subcategories', label: 'Подкатегории', always: true },
   { id: 'models', label: 'Модели', always: true },
   { id: 'clients', label: 'Клиенты', dataKey: 'clients' },
   { id: 'dataquality', label: 'Качество данных', dataKey: 'dataquality' },
+  { id: 'tasks', label: 'Задачи', dataKey: 'tasks' },
   { id: 'narrative', label: 'Методика', always: true },
 ];
 
@@ -95,8 +136,20 @@ function renderActiveTab() {
     case 'newitems':
       renderNewItems(viewsHost, currentData);
       break;
+    case 'weekly':
+      renderWeekly(viewsHost, currentData);
+      break;
+    case 'monthcmp':
+      renderMonthCmp(viewsHost, currentData);
+      break;
+    case 'weekcmp':
+      renderWeekCmp(viewsHost, currentData);
+      break;
     case 'deficit':
       renderDeficit(viewsHost, currentData);
+      break;
+    case 'procurement':
+      renderProcurement(viewsHost, currentData);
       break;
     case 'categories':
       renderCategoryLikeTable(viewsHost, currentData.categories, 'Категории', 'Нет данных по категориям.');
@@ -112,6 +165,9 @@ function renderActiveTab() {
       break;
     case 'dataquality':
       renderDataQuality(viewsHost, currentData);
+      break;
+    case 'tasks':
+      renderTasks(viewsHost, currentData);
       break;
     case 'narrative':
       renderNarrative(viewsHost, currentData);
