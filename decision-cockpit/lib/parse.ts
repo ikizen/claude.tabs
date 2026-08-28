@@ -1,11 +1,39 @@
 // Парсер MD-контракта дашборда решений по товарным запасам.
-// Смотри раздел 1 техспеки: секции помечены якорями <!-- id:start --> ... <!-- id:end -->,
-// внутри секции — первая markdown-таблица (кроме narrative, там свободный текст).
+// Секции помечены якорями <!-- id:start --> ... <!-- id:end -->, внутри
+// секции — первая markdown-таблица (кроме narrative, там свободный текст).
+
+export type ReportRow = Record<string, string | number>;
+
+export interface ParsedReport {
+  meta: Record<string, string | number>;
+  kpi: ReportRow[];
+  statuses: ReportRow[];
+  categories: ReportRow[];
+  subcategories: ReportRow[];
+  models: ReportRow[];
+  deficit: ReportRow[];
+  actions7d: ReportRow[];
+  forecast: ReportRow[];
+  newitems: ReportRow[];
+  clients: ReportRow[];
+  retention: ReportRow[];
+  dataquality: ReportRow[];
+  weekly: ReportRow[];
+  monthcmp: ReportRow[];
+  weekcmp: ReportRow[];
+  procurement: ReportRow[];
+  tasks: ReportRow[];
+  narrative: string;
+  warnings: string[];
+  missingSections: string[];
+  recognized: boolean;
+}
 
 const REQUIRED_SECTIONS = ['meta', 'kpi', 'statuses'];
 
-// Ключевые слова для fallback-поиска секции по заголовку ##, если якоря отсутствуют.
-const SECTION_HEADING_KEYWORDS = {
+type Keyword = string | string[];
+
+const SECTION_HEADING_KEYWORDS: Record<string, Keyword[]> = {
   meta: ['мета', 'meta'],
   kpi: ['kpi', 'показател'],
   statuses: ['карта капитала', 'статус'],
@@ -29,26 +57,25 @@ const SECTION_HEADING_KEYWORDS = {
 
 const NUMBER_RE = /^-?\d+(\.\d+)?$/;
 
-function coerce(value) {
+function coerce(value: string): string | number {
   const trimmed = value.trim();
   if (NUMBER_RE.test(trimmed)) return parseFloat(trimmed);
   return trimmed;
 }
 
-function splitTableRow(line) {
+function splitTableRow(line: string): string[] {
   let row = line.trim();
   if (row.startsWith('|')) row = row.slice(1);
   if (row.endsWith('|')) row = row.slice(0, -1);
   return row.split('|').map((cell) => cell.trim());
 }
 
-function isSeparatorRow(line) {
+function isSeparatorRow(line: string): boolean {
   const cells = splitTableRow(line);
   return cells.length > 0 && cells.every((cell) => /^:?-+:?$/.test(cell));
 }
 
-// Находит первую markdown-таблицу в блоке текста и возвращает массив объектов-строк.
-function extractFirstTable(text) {
+function extractFirstTable(text: string): { headers: string[]; rows: ReportRow[] } | null {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i];
@@ -56,11 +83,11 @@ function extractFirstTable(text) {
     if (!isSeparatorRow(lines[i + 1])) continue;
 
     const headers = splitTableRow(line);
-    const rows = [];
+    const rows: ReportRow[] = [];
     let j = i + 2;
     while (j < lines.length && lines[j].includes('|') && lines[j].trim() !== '') {
       const cells = splitTableRow(lines[j]);
-      const row = {};
+      const row: ReportRow = {};
       headers.forEach((header, idx) => {
         row[header] = coerce(cells[idx] ?? '');
       });
@@ -72,19 +99,19 @@ function extractFirstTable(text) {
   return null;
 }
 
-function findByAnchor(md, id) {
+function findByAnchor(md: string, id: string): string | null {
   const re = new RegExp(`<!--\\s*${id}:start\\s*-->([\\s\\S]*?)<!--\\s*${id}:end\\s*-->`, 'i');
   const match = md.match(re);
   return match ? match[1] : null;
 }
 
-function findByHeadingFallback(md, id) {
+function findByHeadingFallback(md: string, id: string): string | null {
   const keywords = SECTION_HEADING_KEYWORDS[id] || [];
   if (keywords.length === 0) return null;
 
   const headingRe = /^##\s+(.+)$/gm;
-  const headings = [];
-  let m;
+  const headings: { index: number; end: number; title: string }[] = [];
+  let m: RegExpExecArray | null;
   while ((m = headingRe.exec(md)) !== null) {
     headings.push({ index: m.index, end: m.index + m[0].length, title: m[1].trim() });
   }
@@ -102,7 +129,7 @@ function findByHeadingFallback(md, id) {
   return null;
 }
 
-function extractSection(md, id) {
+function extractSection(md: string, id: string): { text: string; source: 'anchor' | 'heading' } | null {
   const anchored = findByAnchor(md, id);
   if (anchored !== null) return { text: anchored, source: 'anchor' };
 
@@ -112,9 +139,8 @@ function extractSection(md, id) {
   return null;
 }
 
-// meta — единственная секция "ключ/значение", превращается в плоский объект.
-function parseMetaTable(rows) {
-  const meta = {};
+function parseMetaTable(rows: ReportRow[]): Record<string, string | number> {
+  const meta: Record<string, string | number> = {};
   for (const row of rows) {
     const values = Object.values(row);
     const key = values[0];
@@ -143,11 +169,12 @@ const TABLE_SECTIONS = [
   'weekcmp',
   'procurement',
   'tasks',
-];
+] as const;
 
-export function parseReport(md) {
-  const warnings = [];
-  const result = {
+export function parseReport(md: string): ParsedReport {
+  const warnings: string[] = [];
+  const missingSections: string[] = [];
+  const result: ParsedReport = {
     meta: {},
     kpi: [],
     statuses: [],
@@ -168,12 +195,12 @@ export function parseReport(md) {
     tasks: [],
     narrative: '',
     warnings,
-    missingSections: [],
+    missingSections,
+    recognized: false,
   };
 
   let anySectionFound = false;
 
-  // meta
   const metaSection = extractSection(md, 'meta');
   if (metaSection) {
     anySectionFound = true;
@@ -185,43 +212,41 @@ export function parseReport(md) {
       }
     } else {
       warnings.push('Секция "meta" найдена, но таблица внутри не распознана.');
-      result.missingSections.push('meta');
+      missingSections.push('meta');
     }
   } else {
-    result.missingSections.push('meta');
+    missingSections.push('meta');
   }
 
-  // table-based sections
   for (const id of TABLE_SECTIONS) {
     const section = extractSection(md, id);
     if (!section) {
-      result.missingSections.push(id);
+      missingSections.push(id);
       continue;
     }
     anySectionFound = true;
     const table = extractFirstTable(section.text);
     if (!table) {
       warnings.push(`Секция "${id}" найдена, но таблица внутри не распознана.`);
-      result.missingSections.push(id);
+      missingSections.push(id);
       continue;
     }
-    result[id] = table.rows;
+    (result[id] as ReportRow[]) = table.rows;
     if (section.source === 'heading') {
       warnings.push(`Секция "${id}" найдена по заголовку (fallback), а не по якорю — проверьте разметку.`);
     }
   }
 
-  // narrative — свободный текст, без табличного парсинга
   const narrativeSection = extractSection(md, 'narrative');
   if (narrativeSection) {
     anySectionFound = true;
     result.narrative = narrativeSection.text.trim();
   } else {
-    result.missingSections.push('narrative');
+    missingSections.push('narrative');
   }
 
   for (const id of REQUIRED_SECTIONS) {
-    if (result.missingSections.includes(id)) {
+    if (missingSections.includes(id)) {
       warnings.push(`Обязательная секция "${id}" не найдена.`);
     }
   }
