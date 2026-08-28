@@ -4,6 +4,7 @@ import * as React from 'react';
 import { marked } from 'marked';
 
 import { ThemeToggle } from '@/components/theme-toggle';
+import { AppSidebar } from '@/components/app-sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { UploadView } from '@/components/views/upload-view';
 import { OverviewView } from '@/components/views/overview-view';
@@ -26,17 +27,8 @@ import { visibleTabs, type TabId } from '@/lib/tabs';
 export default function Home() {
   const [data, setData] = React.useState<ParsedReport | null>(null);
   const [filename, setFilename] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState<TabId>('upload');
+  const [activeTab, setActiveTab] = React.useState<TabId | 'upload'>('upload');
   const [unrecognizedMarkdown, setUnrecognizedMarkdown] = React.useState<string | null>(null);
-  const [compact, setCompact] = React.useState(false);
-
-  React.useEffect(() => {
-    function onScroll() {
-      setCompact(window.scrollY > 8);
-    }
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   function handleFile(file: File) {
     const reader = new FileReader();
@@ -56,7 +48,7 @@ export default function Home() {
     reader.readAsText(file);
   }
 
-  const tabs = visibleTabs(data);
+  const tabs = data && !unrecognizedMarkdown ? visibleTabs(data) : [];
   const reportTitle = data ? (data.meta['Заголовок'] as string) || filename : '';
 
   function renderActive() {
@@ -93,7 +85,7 @@ export default function Home() {
       case 'monthcmp':
         return <ComparisonView title="Сравнение · месяц" rows={data.monthcmp} />;
       case 'weekcmp':
-        return <ComparisonView title="Сравнение · неделя" rows={data.weekcmp} />;
+        return <ComparisonView title="Сравнение · неделя" rows={data.weekcmp} transpose />;
       case 'deficit':
         return <DeficitView data={data} />;
       case 'procurement':
@@ -119,44 +111,18 @@ export default function Home() {
 
   return (
     <TooltipProvider>
-      <header
-        className={`sticky top-0 z-20 flex flex-wrap items-center gap-4 border-b bg-background/95 backdrop-blur px-4 py-3 transition-[padding] sm:px-6 ${
-          compact ? 'py-2' : 'py-4'
-        }`}
-      >
-        <div className={`font-bold transition-[font-size] ${compact ? 'text-base' : 'text-xl'}`}>Decision Cockpit</div>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar tabs={tabs} activeTab={activeTab} onSelect={setActiveTab} />
 
-        {data && !unrecognizedMarkdown && (
-          <nav className="flex gap-1 overflow-x-auto md:flex-1 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-20 max-md:border-t max-md:bg-background max-md:px-2 max-md:py-1.5 max-md:shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
-            <button
-              className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors sm:text-sm ${
-                activeTab === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-              }`}
-              onClick={() => setActiveTab('upload')}
-            >
-              Загрузка
-            </button>
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors sm:text-sm ${
-                  activeTab === t.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                }`}
-                onClick={() => setActiveTab(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
-        )}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-20 flex items-center justify-end gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
+            <span className="max-w-[60%] truncate text-sm text-muted-foreground">{reportTitle}</span>
+            <ThemeToggle />
+          </header>
 
-        <div className="ml-auto flex items-center gap-2 max-w-[40%] truncate text-sm text-muted-foreground">
-          <span className="truncate">{reportTitle}</span>
+          <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">{renderActive()}</main>
         </div>
-        <ThemeToggle />
-      </header>
-
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-24 sm:px-6 md:pb-6">{renderActive()}</main>
+      </div>
     </TooltipProvider>
   );
 }

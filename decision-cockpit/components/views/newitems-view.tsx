@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import { ChevronRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -9,10 +8,16 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { fmtMoney, fmtNumber } from '@/lib/format';
 import type { ParsedReport, ReportRow } from '@/lib/parse';
 
-const RISK_CLASS: Record<string, string> = {
-  'низкий': 'border-l-emerald-500 bg-emerald-600',
-  'средний': 'border-l-amber-500 bg-amber-600',
-  'высокий': 'border-l-red-500 bg-red-600',
+const RISK_DOT: Record<string, string> = {
+  'низкий': 'bg-emerald-500',
+  'средний': 'bg-amber-500',
+  'высокий': 'bg-red-500',
+};
+
+const RISK_BADGE: Record<string, string> = {
+  'низкий': 'bg-emerald-600',
+  'средний': 'bg-amber-600',
+  'высокий': 'bg-red-600',
 };
 
 const BUCKETS = [
@@ -22,35 +27,27 @@ const BUCKETS = [
   { label: 'Через 6+ месяцев', test: (m: number) => m >= 6 },
 ];
 
-function NewItemCard({ row }: { row: ReportRow }) {
-  const riskClass = RISK_CLASS[String(row['Риск'])] ?? RISK_CLASS['средний'];
-  const [borderClass, bgClass] = riskClass.split(' ');
+function NewItemRow({ row }: { row: ReportRow }) {
+  const risk = String(row['Риск'] ?? '');
   return (
-    <div className={cn('rounded-xl border border-l-4 bg-muted/40 p-4', borderClass)}>
-      <div className="font-semibold">{String(row['Модель'] ?? '')}</div>
-      <div className="mb-3 text-xs text-muted-foreground">{String(row['Категория'] ?? '')}</div>
-      <div className="mb-3 flex flex-col gap-1 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Остаток</span>
-          <span>
-            {fmtNumber(row['Остаток_шт'])} шт · {fmtMoney(row['Остаток_тг'])}
-          </span>
+    <div className="flex flex-col gap-2 border-b p-3 last:border-b-0 sm:flex-row sm:items-center sm:gap-4">
+      <span className={cn('mt-1 size-2 shrink-0 rounded-full sm:mt-0', RISK_DOT[risk] ?? 'bg-muted-foreground')} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <span className="font-medium">{String(row['Модель'] ?? '')}</span>
+          <span className="text-xs text-muted-foreground">{String(row['Категория'] ?? '')}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Сезон с</span>
-          <span>{String(row['Сезон_старт'] ?? '')}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Ожид. продажи</span>
-          <span>{fmtNumber(row['Ожид_продажи_шт'])} шт</span>
-        </div>
+        {row['Комментарий'] && <div className="text-xs text-muted-foreground">{String(row['Комментарий'])}</div>}
       </div>
-      <span className={cn('inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold text-white', bgClass)}>
-        риск: {String(row['Риск'])}
-      </span>
-      {row['Комментарий'] && (
-        <div className="mt-3 border-t pt-3 text-xs text-muted-foreground">{String(row['Комментарий'])}</div>
-      )}
+      <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm sm:justify-end">
+        <span className="tabular-nums text-muted-foreground">
+          {fmtNumber(row['Остаток_шт'])} шт · {fmtMoney(row['Остаток_тг'])}
+        </span>
+        <span className="tabular-nums text-muted-foreground">с {String(row['Сезон_старт'] ?? '')}</span>
+        <span className={cn('inline-flex rounded-full px-2 py-0.5 text-xs font-semibold text-white', RISK_BADGE[risk] ?? 'bg-muted-foreground')}>
+          {risk}
+        </span>
+      </div>
     </div>
   );
 }
@@ -89,9 +86,9 @@ export function NewItemsView({ data }: { data: ParsedReport }) {
               {bucket.label} ({rows.length})
             </CollapsibleTrigger>
             <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
-              <div className="grid grid-cols-1 gap-3 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="border-t">
                 {rows.map((row, i) => (
-                  <NewItemCard key={i} row={row} />
+                  <NewItemRow key={i} row={row} />
                 ))}
               </div>
             </CollapsibleContent>
