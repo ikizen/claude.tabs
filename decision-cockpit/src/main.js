@@ -3,12 +3,17 @@ import { parseReport } from './parse.js';
 import {
   renderOverview,
   renderActions7d,
+  renderForecast,
+  renderNewItems,
   renderDeficit,
   renderCategoryLikeTable,
   renderModels,
+  renderClients,
+  renderDataQuality,
   renderNarrative,
 } from './render.js';
 
+const topbar = document.querySelector('.topbar');
 const tabsNav = document.getElementById('tabs');
 const viewsHost = document.getElementById('views');
 const reportMetaHost = document.getElementById('report-meta');
@@ -17,12 +22,54 @@ let currentData = null;
 let currentFilename = '';
 let activeTab = 'upload';
 
-const TAB_ORDER = ['upload', 'overview', 'actions7d', 'deficit', 'categories', 'subcategories', 'models', 'narrative'];
+// Всегда видимые вкладки не меняются доработкой v2; новые — скрыты, если секции нет в файле.
+const TAB_DEFS = [
+  { id: 'overview', label: 'Обзор', always: true },
+  { id: 'actions7d', label: 'Действия', always: true },
+  { id: 'forecast', label: 'Прогноз', dataKey: 'forecast' },
+  { id: 'newitems', label: 'Новинки', dataKey: 'newitems' },
+  { id: 'deficit', label: 'Дефицит', always: true },
+  { id: 'categories', label: 'Категории', always: true },
+  { id: 'subcategories', label: 'Подкатегории', always: true },
+  { id: 'models', label: 'Модели', always: true },
+  { id: 'clients', label: 'Клиенты', dataKey: 'clients' },
+  { id: 'dataquality', label: 'Качество данных', dataKey: 'dataquality' },
+  { id: 'narrative', label: 'Методика', always: true },
+];
+
+function visibleTabIds(data) {
+  const ids = ['upload'];
+  TAB_DEFS.forEach((def) => {
+    if (def.always || (data && data[def.dataKey] && data[def.dataKey].length > 0)) {
+      ids.push(def.id);
+    }
+  });
+  return ids;
+}
+
+function buildTabsNav(data) {
+  tabsNav.innerHTML = '';
+  const uploadBtn = document.createElement('button');
+  uploadBtn.className = 'tab-btn';
+  uploadBtn.dataset.tab = 'upload';
+  uploadBtn.textContent = 'Загрузка';
+  tabsNav.appendChild(uploadBtn);
+
+  TAB_DEFS.forEach((def) => {
+    if (!(def.always || (data && data[def.dataKey] && data[def.dataKey].length > 0))) return;
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn';
+    btn.dataset.tab = def.id;
+    btn.textContent = def.label;
+    tabsNav.appendChild(btn);
+  });
+}
 
 function setActiveTab(tab) {
-  activeTab = tab;
+  const allowed = visibleTabIds(currentData);
+  activeTab = allowed.includes(tab) ? tab : 'upload';
   document.querySelectorAll('.tab-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.tab === tab);
+    btn.classList.toggle('active', btn.dataset.tab === activeTab);
   });
   renderActiveTab();
 }
@@ -42,6 +89,12 @@ function renderActiveTab() {
     case 'actions7d':
       renderActions7d(viewsHost, currentData);
       break;
+    case 'forecast':
+      renderForecast(viewsHost, currentData);
+      break;
+    case 'newitems':
+      renderNewItems(viewsHost, currentData);
+      break;
     case 'deficit':
       renderDeficit(viewsHost, currentData);
       break;
@@ -53,6 +106,12 @@ function renderActiveTab() {
       break;
     case 'models':
       renderModels(viewsHost, currentData);
+      break;
+    case 'clients':
+      renderClients(viewsHost, currentData);
+      break;
+    case 'dataquality':
+      renderDataQuality(viewsHost, currentData);
       break;
     case 'narrative':
       renderNarrative(viewsHost, currentData);
@@ -158,9 +217,9 @@ function handleFile(file) {
     const text = String(reader.result);
     currentFilename = file.name;
     currentData = parseReport(text);
-    tabsNav.hidden = false;
 
     if (!currentData.recognized) {
+      tabsNav.hidden = true;
       viewsHost.innerHTML = '';
       const view = document.createElement('div');
       view.className = 'view';
@@ -177,6 +236,8 @@ function handleFile(file) {
       return;
     }
 
+    buildTabsNav(currentData);
+    tabsNav.hidden = false;
     updateReportMetaBadge();
     setActiveTab('upload');
   };
@@ -196,6 +257,11 @@ tabsNav.addEventListener('click', (e) => {
   const btn = e.target.closest('.tab-btn');
   if (!btn) return;
   setActiveTab(btn.dataset.tab);
+});
+
+// Крупный заголовок топбара слегка сжимается при прокрутке страницы.
+window.addEventListener('scroll', () => {
+  topbar.classList.toggle('compact', window.scrollY > 8);
 });
 
 renderUploadView();

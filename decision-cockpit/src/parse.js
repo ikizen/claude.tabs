@@ -14,6 +14,11 @@ const SECTION_HEADING_KEYWORDS = {
   models: ['модел'],
   deficit: ['дефицит'],
   actions7d: ['7 дн', 'действи'],
+  forecast: ['прогноз'],
+  newitems: ['новинк'],
+  clients: ['клиенты'],
+  retention: ['удержание', 'отток'],
+  dataquality: ['качество данных'],
   narrative: ['повествован', 'методик'],
 };
 
@@ -112,7 +117,20 @@ function parseMetaTable(rows) {
   return meta;
 }
 
-const TABLE_SECTIONS = ['kpi', 'statuses', 'categories', 'subcategories', 'models', 'deficit', 'actions7d'];
+const TABLE_SECTIONS = [
+  'kpi',
+  'statuses',
+  'categories',
+  'subcategories',
+  'models',
+  'deficit',
+  'actions7d',
+  'forecast',
+  'newitems',
+  'clients',
+  'retention',
+  'dataquality',
+];
 
 export function parseReport(md) {
   const warnings = [];
@@ -125,6 +143,11 @@ export function parseReport(md) {
     models: [],
     deficit: [],
     actions7d: [],
+    forecast: [],
+    newitems: [],
+    clients: [],
+    retention: [],
+    dataquality: [],
     narrative: '',
     warnings,
     missingSections: [],
