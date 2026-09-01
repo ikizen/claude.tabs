@@ -7,14 +7,17 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ForecastTreeNode } from '@/components/forecast-tree-node';
 import { buildForecastTree } from '@/lib/forecast-tree';
 import { fmtMoney, fmtNumber } from '@/lib/format';
-import type { ParsedReport } from '@/lib/parse';
+import { flattenForecastV3, defaultScenario, type ParsedReport } from '@/lib/parse';
 
 const HORIZONS = ['1', '3', '6', '9', '12'];
 
 export function ForecastView({ data }: { data: ParsedReport }) {
   const [horizon, setHorizon] = React.useState('12');
+  const [scenario, setScenario] = React.useState(() => (data.forecastV3 ? defaultScenario(data.forecastV3) : ''));
 
-  if (data.forecast.length === 0) {
+  const forecastRows = data.forecastV3 ? flattenForecastV3(data.forecastV3, scenario) : data.forecast;
+
+  if (forecastRows.length === 0) {
     return (
       <div className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold">Прогноз продаж</h2>
@@ -26,7 +29,7 @@ export function ForecastView({ data }: { data: ParsedReport }) {
   // Правило 2: итоги считаются только по строкам уровня "категория" —
   // иначе сумма тысячи стопроцентно ошибочных прогнозов по моделям выдаётся
   // за точную цифру.
-  const categoryRows = data.forecast.filter((r) => r['Уровень'] === 'категория');
+  const categoryRows = forecastRows.filter((r) => r['Уровень'] === 'категория');
   const totalUnits = categoryRows.reduce((sum, r) => sum + (Number(r[`Прогноз_${horizon}м`]) || 0), 0);
   const isTwelve = horizon === '12';
   const totalMoney = isTwelve ? categoryRows.reduce((sum, r) => sum + (Number(r['Прогноз_12м_тг']) || 0), 0) : null;
@@ -37,11 +40,21 @@ export function ForecastView({ data }: { data: ParsedReport }) {
     ? categoryRows.filter((r) => r['Точность'] === 'высокая').length / categoryRows.length
     : 0;
 
-  const tree = buildForecastTree(data.forecast, data.models);
+  const tree = buildForecastTree(forecastRows, data.models);
 
   return (
     <div className="flex flex-col gap-6">
       <h2 className="text-xl font-semibold">Прогноз продаж</h2>
+
+      {data.forecastV3 && (
+        <ToggleGroup type="single" value={scenario} onValueChange={(v) => v && setScenario(v)}>
+          {data.forecastV3.scenarioNames.map((s) => (
+            <ToggleGroupItem key={s} value={s}>
+              {s}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      )}
 
       <ToggleGroup type="single" value={horizon} onValueChange={(v) => v && setHorizon(v)}>
         {HORIZONS.map((h) => (

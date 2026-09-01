@@ -25,12 +25,20 @@ import { TasksView } from '@/components/views/tasks-view';
 import { NarrativeView } from '@/components/views/narrative-view';
 import { parseReport, type ParsedReport } from '@/lib/parse';
 import { visibleTabs, type TabId } from '@/lib/tabs';
+import type { FlagAxis } from '@/lib/status-labels';
+import type { FlagFilterRequest } from '@/components/views/models-view';
 
 export default function Home() {
   const [data, setData] = React.useState<ParsedReport | null>(null);
   const [filename, setFilename] = React.useState('');
   const [activeTab, setActiveTab] = React.useState<TabId | 'upload'>('upload');
   const [unrecognizedMarkdown, setUnrecognizedMarkdown] = React.useState<string | null>(null);
+  const [modelsFlagFilter, setModelsFlagFilter] = React.useState<FlagFilterRequest | null>(null);
+
+  function filterModelsByFlag(axis: FlagAxis, value: string) {
+    setModelsFlagFilter({ axis, value });
+    setActiveTab('models');
+  }
 
   function handleFile(file: File) {
     const reader = new FileReader();
@@ -75,7 +83,7 @@ export default function Home() {
     }
     switch (activeTab) {
       case 'overview':
-        return <OverviewView data={data} />;
+        return <OverviewView data={data} onFilterModels={filterModelsByFlag} />;
       case 'actions7d':
         return <ActionsView data={data} />;
       case 'weekly':
@@ -97,7 +105,13 @@ export default function Home() {
       case 'subcategories':
         return <CategoryTableView title="Подкатегории" rows={data.subcategories} emptyMessage="Нет данных по подкатегориям." />;
       case 'models':
-        return <ModelsView data={data} />;
+        return (
+          <ModelsView
+            data={data}
+            initialFlagFilter={modelsFlagFilter}
+            onConsumeFlagFilter={() => setModelsFlagFilter(null)}
+          />
+        );
       case 'clients':
         return <ClientsView data={data} />;
       case 'dataquality':

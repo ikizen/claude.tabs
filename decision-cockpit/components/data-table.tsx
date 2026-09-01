@@ -162,12 +162,14 @@ export function DataTable({
   defaultSortKey,
   defaultSortDir = 1,
   emptyMessage = 'Нет данных.',
+  onRowClick,
 }: {
   columns: DataTableColumn[];
   rows: ReportRow[];
   defaultSortKey?: string;
   defaultSortDir?: 1 | -1;
   emptyMessage?: string;
+  onRowClick?: (row: ReportRow) => void;
 }) {
   const [sortKey, setSortKey] = React.useState<string | undefined>(defaultSortKey);
   const [sortDir, setSortDir] = React.useState<1 | -1>(defaultSortDir);
@@ -256,7 +258,12 @@ export function DataTable({
           </TableHeader>
           <TableBody>
             {sorted.map((row, idx) => (
-              <TableRow key={idx} className="animate-in fade-in slide-in-from-bottom-1 duration-300 fill-mode-both" style={rowStyle(idx)}>
+              <TableRow
+                key={idx}
+                className={cn('animate-in fade-in slide-in-from-bottom-1 duration-300 fill-mode-both', onRowClick && 'cursor-pointer')}
+                style={rowStyle(idx)}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+              >
                 {columns.map((col) => (
                   <TableCell key={col.key} className={col.align === 'right' ? 'text-right' : undefined}>
                     {col.render ? col.render(row) : String(row[col.key] ?? '')}
@@ -276,8 +283,12 @@ export function DataTable({
         {sorted.map((row, idx) => (
           <div
             key={idx}
-            className="animate-in fade-in slide-in-from-bottom-1 fill-mode-both rounded-xl border bg-card p-4 shadow-sm duration-300"
+            className={cn(
+              'animate-in fade-in slide-in-from-bottom-1 fill-mode-both rounded-xl border bg-card p-4 shadow-sm duration-300',
+              onRowClick && 'cursor-pointer'
+            )}
             style={rowStyle(idx)}
+            onClick={onRowClick ? () => onRowClick(row) : undefined}
           >
             {columns
               .filter((c) => c.key === primaryKey)

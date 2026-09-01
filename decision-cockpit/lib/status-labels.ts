@@ -76,3 +76,49 @@ export const EFFORT_LABEL: Record<string, string> = {
   'средние': 'средние усилия',
   'высокие': 'высокие усилия',
 };
+
+// Словарь reasonCodes зашит в код сайта (одинаков для всех отчётов) — сайт
+// только переводит присланные коды на человеческий язык, не изобретает их.
+export const REASON_CODE_LABELS: Record<string, string> = {
+  ZERO_SALES_YEAR: 'ни одной продажи за год',
+  EXPOSED: 'товар был на складе достаточно долго',
+  NOT_EXPOSED: 'товар появился недавно, сезон мог не наступить',
+  NO_SEASON_SALES: 'нет продаж в своё сезонное окно',
+  COVERAGE_GT_3_5: 'запас больше 3,5 сезонов',
+  MARGIN_OK: 'маржа достаточна для набора',
+  MARGIN_LOW: 'маржа слишком низкая',
+  COVERAGE_GT_2: 'запас 2–3,5 сезона',
+  COVERAGE_GT_1_3: 'запас 1,3–2 сезона',
+  COVERAGE_NORMAL: 'запас в норме',
+  COVERAGE_LT_0_8: 'запаса меньше 80% от сезонной нормы',
+  CANDIDATE_NOT_ORDER: 'кандидат на дозаказ, не готовая команда',
+  NEGATIVE_MARGIN: 'отрицательная маржа',
+  DATA_ANOMALY: 'подозрение на ошибку в учёте',
+  NEW: 'новинка, мало истории',
+  THIN: 'мало продаж, статистика недостоверна',
+  ANNUAL_DENOMINATOR: 'трактуется как круглогодичный товар, не сезонный',
+};
+
+export function reasonCodeLabel(code: string): string {
+  return REASON_CODE_LABELS[code] ?? code;
+}
+
+export type FlagAxis = 'dataQuality' | 'history' | 'economics' | 'confidence';
+
+export const FLAG_AXIS_LABELS: Record<FlagAxis, string> = {
+  dataQuality: 'Данные',
+  history: 'История',
+  economics: 'Экономика',
+  confidence: 'Уверенность',
+};
+
+export const FLAG_VALUE_LABELS: Record<FlagAxis, Record<string, string>> = {
+  dataQuality: { OK: 'в порядке', 'CHECK DATA': 'требует проверки' },
+  history: { ENOUGH: 'достаточно', THIN: 'мало (THIN)', NEW: 'новинка' },
+  economics: { OK: 'в норме', 'PRICE FIX': 'нужен пересмотр цены' },
+  confidence: { 'высокая': 'высокая', 'средняя': 'средняя', 'низкая': 'низкая' },
+};
+
+export function flagValueLabel(axis: FlagAxis, value: string): string {
+  return FLAG_VALUE_LABELS[axis]?.[value] ?? value ?? '—';
+}

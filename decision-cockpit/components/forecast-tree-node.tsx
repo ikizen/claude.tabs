@@ -48,20 +48,30 @@ function ForecastValue({ row, horizon }: { row: ForecastNode['row']; horizon: st
   return content;
 }
 
-function TrendBadge({ trend }: { trend: unknown }) {
+function TrendBadge({ trend, clipped }: { trend: unknown; clipped?: boolean }) {
   if (typeof trend !== 'number') return <span className="text-xs text-muted-foreground">—</span>;
   const pct = (trend - 1) * 100;
   const up = pct >= 0;
-  return (
+  const badge = (
     <span
       className={cn(
-        'rounded-md px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap',
+        'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap',
         up ? 'bg-emerald-600/10 text-emerald-600' : 'bg-red-600/10 text-red-600'
       )}
     >
+      {clipped && <span>⚠</span>}
       {up ? '+' : ''}
       {pct.toFixed(0)}%
     </span>
+  );
+  if (!clipped) return badge;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="cursor-help">{badge}</span>
+      </TooltipTrigger>
+      <TooltipContent>Сработало ограничение диапазона тренда — реальный тренд может отличаться.</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -87,7 +97,7 @@ export function ForecastTreeNode({ node, depth, horizon }: { node: ForecastNode;
       )}
       <span className="min-w-0 flex-1 truncate">{String(node.row['Объект'] ?? '')}</span>
       {level === 'категория' && <Sparkline row={node.row} />}
-      {level && <TrendBadge trend={node.row['Тренд']} />}
+      {level && <TrendBadge trend={node.row['Тренд']} clipped={node.row['ТрендОграничен'] === 1} />}
       {level && <ForecastValue row={node.row} horizon={horizon} />}
     </div>
   );

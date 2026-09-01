@@ -3,8 +3,22 @@ import { DataTable, type DataTableColumn } from '@/components/data-table';
 import { StatusBadge, statusBarClass } from '@/components/status-badge';
 import { fmtMoney, fmtNumber } from '@/lib/format';
 import type { ParsedReport } from '@/lib/parse';
+import type { FlagAxis } from '@/lib/status-labels';
 
-export function OverviewView({ data }: { data: ParsedReport }) {
+const FLAG_PLAQUES: { axis: FlagAxis; value: string; label: string; tone: string }[] = [
+  { axis: 'dataQuality', value: 'CHECK DATA', label: 'позиций требуют проверки данных', tone: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200' },
+  { axis: 'economics', value: 'PRICE FIX', label: 'позиций — пересмотра цены', tone: 'border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200' },
+  { axis: 'history', value: 'THIN', label: 'позиций — мало истории (THIN)', tone: 'border-slate-300 bg-slate-50 text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200' },
+  { axis: 'history', value: 'NEW', label: 'позиций — новинки, сезон впереди', tone: 'border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200' },
+];
+
+export function OverviewView({
+  data,
+  onFilterModels,
+}: {
+  data: ParsedReport;
+  onFilterModels?: (axis: FlagAxis, value: string) => void;
+}) {
   const total = data.statuses.reduce((sum, s) => sum + (Number(s['Остаток']) || 0), 0);
 
   const columns: DataTableColumn[] = [
@@ -51,6 +65,25 @@ export function OverviewView({ data }: { data: ParsedReport }) {
               tone={row['Оценка'] === 'good' ? 'good' : row['Оценка'] === 'bad' ? 'bad' : 'neutral'}
             />
           ))}
+        </div>
+      )}
+
+      {data.productTree && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {FLAG_PLAQUES.map(({ axis, value, label, tone }) => {
+            const count = data.models.filter((r) => r[`flags_${axis}`] === value).length;
+            return (
+              <button
+                key={`${axis}:${value}`}
+                onClick={() => onFilterModels?.(axis, value)}
+                disabled={!onFilterModels}
+                className={`rounded-lg border p-4 text-left transition-opacity ${tone} ${onFilterModels ? 'cursor-pointer hover:opacity-80' : ''}`}
+              >
+                <div className="text-2xl font-bold">{count}</div>
+                <div className="text-sm">{label}</div>
+              </button>
+            );
+          })}
         </div>
       )}
 
