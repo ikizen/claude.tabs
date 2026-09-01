@@ -16,9 +16,11 @@ import { ComparisonView } from '@/components/views/comparison-view';
 import { DeficitView } from '@/components/views/deficit-view';
 import { ProcurementView } from '@/components/views/procurement-view';
 import { CategoryTableView } from '@/components/views/category-table-view';
+import { CategoriesHierarchyView } from '@/components/views/categories-hierarchy-view';
 import { ModelsView } from '@/components/views/models-view';
 import { ClientsView } from '@/components/views/clients-view';
 import { DataQualityView } from '@/components/views/dataquality-view';
+import { AbcView } from '@/components/views/abc-view';
 import { TasksView } from '@/components/views/tasks-view';
 import { NarrativeView } from '@/components/views/narrative-view';
 import { parseReport, type ParsedReport } from '@/lib/parse';
@@ -91,7 +93,7 @@ export default function Home() {
       case 'procurement':
         return <ProcurementView data={data} />;
       case 'categories':
-        return <CategoryTableView title="Категории" rows={data.categories} emptyMessage="Нет данных по категориям." />;
+        return <CategoriesHierarchyView categories={data.categories} subcategories={data.subcategories} />;
       case 'subcategories':
         return <CategoryTableView title="Подкатегории" rows={data.subcategories} emptyMessage="Нет данных по подкатегориям." />;
       case 'models':
@@ -100,6 +102,8 @@ export default function Home() {
         return <ClientsView data={data} />;
       case 'dataquality':
         return <DataQualityView data={data} />;
+      case 'abc':
+        return <AbcView data={data} />;
       case 'tasks':
         return <TasksView data={data} />;
       case 'narrative':
@@ -120,7 +124,7 @@ export default function Home() {
             <ThemeToggle />
           </header>
 
-          <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">{renderActive()}</main>
+          <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-6 sm:px-6 lg:px-8">{renderActive()}</main>
         </div>
       </div>
     </TooltipProvider>

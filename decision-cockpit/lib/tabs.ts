@@ -16,6 +16,7 @@ export type TabId =
   | 'models'
   | 'clients'
   | 'dataquality'
+  | 'abc'
   | 'tasks'
   | 'narrative';
 
@@ -42,6 +43,7 @@ export const TAB_DEFS: TabDef[] = [
   { id: 'models', label: 'Модели', always: true, group: 'Запасы' },
   { id: 'clients', label: 'Клиенты', dataKey: 'clients', group: 'Клиенты и данные' },
   { id: 'dataquality', label: 'Качество данных', dataKey: 'dataquality', group: 'Клиенты и данные' },
+  { id: 'abc', label: 'ABC-анализ', dataKey: 'abcproducts', group: 'Клиенты и данные' },
   { id: 'tasks', label: 'Задачи', dataKey: 'tasks' },
   { id: 'narrative', label: 'Методика', always: true },
 ];

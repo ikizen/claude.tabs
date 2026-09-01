@@ -23,6 +23,7 @@ export interface ParsedReport {
   weekcmp: ReportRow[];
   procurement: ReportRow[];
   tasks: ReportRow[];
+  abcproducts: ReportRow[];
   narrative: string;
   warnings: string[];
   missingSections: string[];
@@ -52,6 +53,7 @@ const SECTION_HEADING_KEYWORDS: Record<string, Keyword[]> = {
   weekcmp: [['сравнение', 'недел']],
   procurement: ['закуп'],
   tasks: ['задач', 'канбан'],
+  abcproducts: [['abc', 'товар']],
   narrative: ['повествован', 'методик'],
 };
 
@@ -169,6 +171,7 @@ const TABLE_SECTIONS = [
   'weekcmp',
   'procurement',
   'tasks',
+  'abcproducts',
 ] as const;
 
 export function parseReport(md: string): ParsedReport {
@@ -193,6 +196,7 @@ export function parseReport(md: string): ParsedReport {
     weekcmp: [],
     procurement: [],
     tasks: [],
+    abcproducts: [],
     narrative: '',
     warnings,
     missingSections,

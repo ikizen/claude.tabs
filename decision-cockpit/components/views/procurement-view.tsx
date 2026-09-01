@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { fmtNumber } from '@/lib/format';
 import { ABC_CLASS_INFO } from '@/lib/status-labels';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { HeaderLabel } from '@/components/header-label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ParsedReport, ReportRow } from '@/lib/parse';
 
@@ -121,9 +122,15 @@ export function ProcurementView({ data }: { data: ParsedReport }) {
             ))}
             <TableHead>Закупать</TableHead>
             <TableHead>Сезон</TableHead>
-            <TableHead className="text-right">Норма, мес</TableHead>
-            <TableHead className="text-right">Заказ, шт</TableHead>
-            <TableHead>Класс</TableHead>
+            <TableHead className="text-right">
+              <HeaderLabel label="Норма, мес" />
+            </TableHead>
+            <TableHead className="text-right">
+              <HeaderLabel label="Заказ, шт" />
+            </TableHead>
+            <TableHead>
+              <HeaderLabel label="Класс" />
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
