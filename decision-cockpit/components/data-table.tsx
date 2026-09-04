@@ -50,6 +50,7 @@ function ColumnFilterMenu({
 }) {
   const numeric = isNumericColumn(rows, col.key);
   const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState('');
   const hasFilter = !!active;
 
   const distinctValues = React.useMemo(() => {
@@ -61,6 +62,16 @@ function ColumnFilterMenu({
     });
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [rows, col.key, numeric]);
+
+  const visibleValues = React.useMemo(() => {
+    if (!search.trim()) return distinctValues;
+    const q = search.trim().toLowerCase();
+    return distinctValues.filter((v) => v.toLowerCase().includes(q));
+  }, [distinctValues, search]);
+
+  React.useEffect(() => {
+    if (!open) setSearch('');
+  }, [open]);
 
   const [rangeMin, setRangeMin] = React.useState('');
   const [rangeMax, setRangeMax] = React.useState('');
@@ -137,8 +148,17 @@ function ColumnFilterMenu({
                 </button>
               )}
             </div>
+            {distinctValues.length > 6 && (
+              <Input
+                placeholder="Поиск по значению…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8"
+                autoFocus
+              />
+            )}
             <div className="flex max-h-56 flex-col gap-1 overflow-y-auto">
-              {distinctValues.map((value) => {
+              {visibleValues.map((value) => {
                 const checked = active?.kind === 'set' ? active.values.has(value) : false;
                 return (
                   <label key={value} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm hover:bg-accent">
@@ -148,6 +168,9 @@ function ColumnFilterMenu({
                 );
               })}
               {distinctValues.length === 0 && <div className="text-xs text-muted-foreground">Нет значений.</div>}
+              {distinctValues.length > 0 && visibleValues.length === 0 && (
+                <div className="text-xs text-muted-foreground">Ничего не найдено.</div>
+              )}
             </div>
           </div>
         )}

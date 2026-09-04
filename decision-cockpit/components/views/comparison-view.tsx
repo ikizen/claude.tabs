@@ -19,18 +19,21 @@ function formatMetric(metric: string, value: unknown) {
   return fmtNumber(value);
 }
 
-function DeltaCell({ value, prev }: { value: unknown; prev: unknown }) {
+type DeltaTone = 'up' | 'down' | 'none';
+
+const DELTA_TONE_CLASS: Record<DeltaTone, string> = {
+  up: 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400',
+  down: 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400',
+  none: 'text-muted-foreground',
+};
+
+function deltaInfo(value: unknown, prev: unknown): { text: string; tone: DeltaTone } {
   if (typeof value !== 'number' || typeof prev !== 'number' || prev === 0) {
-    return <span className="text-muted-foreground">—</span>;
+    return { text: '—', tone: 'none' };
   }
   const delta = (value - prev) / Math.abs(prev);
   const up = delta >= 0;
-  return (
-    <span className={cn('rounded-md px-1.5 py-0.5 text-xs font-semibold', up ? 'bg-emerald-600/10 text-emerald-600' : 'bg-red-600/10 text-red-600')}>
-      {up ? '+' : ''}
-      {(delta * 100).toFixed(1)}%
-    </span>
-  );
+  return { text: `${up ? '+' : ''}${(delta * 100).toFixed(1)}%`, tone: up ? 'up' : 'down' };
 }
 
 // Дельта к соседнему периоду — тривиальная арифметика на уже данных числах,
@@ -114,18 +117,20 @@ export function ComparisonView({ title, rows, transpose = false }: { title: stri
                     const period = rowLabel;
                     const prevPeriod = periods[periods.indexOf(rowLabel) - 1];
                     const metric = colLabel;
+                    const info = deltaInfo(valueAt(period, metric), valueAt(prevPeriod, metric));
                     return (
-                      <TableCell key={colLabel} className="text-right">
-                        <DeltaCell value={valueAt(period, metric)} prev={valueAt(prevPeriod, metric)} />
+                      <TableCell key={colLabel} className={cn('text-right font-semibold tabular-nums whitespace-nowrap', DELTA_TONE_CLASS[info.tone])}>
+                        {info.text}
                       </TableCell>
                     );
                   }
                   const metric = rowLabel;
                   const period = colLabel;
                   const prevPeriod = periods[periods.indexOf(colLabel) - 1];
+                  const info = deltaInfo(valueAt(period, metric), valueAt(prevPeriod, metric));
                   return (
-                    <TableCell key={colLabel} className="text-right">
-                      <DeltaCell value={valueAt(period, metric)} prev={valueAt(prevPeriod, metric)} />
+                    <TableCell key={colLabel} className={cn('text-right font-semibold tabular-nums whitespace-nowrap', DELTA_TONE_CLASS[info.tone])}>
+                      {info.text}
                     </TableCell>
                   );
                 })}
