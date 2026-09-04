@@ -90,6 +90,15 @@ function ColumnFilterMenu({
     onChange(current.size === 0 ? undefined : { kind: 'set', values: current });
   }
 
+  function selectAllVisible() {
+    const current = active?.kind === 'set' ? new Set(active.values) : new Set<string>();
+    visibleValues.forEach((v) => current.add(v));
+    onChange({ kind: 'set', values: current });
+  }
+
+  const allVisibleSelected =
+    visibleValues.length > 0 && visibleValues.every((v) => active?.kind === 'set' && active.values.has(v));
+
   function applyRange() {
     const min = rangeMin.trim() === '' ? null : Number(rangeMin);
     const max = rangeMax.trim() === '' ? null : Number(rangeMax);
@@ -142,11 +151,18 @@ function ColumnFilterMenu({
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
               <span>Фильтр: {col.header}</span>
-              {hasFilter && (
-                <button className="text-primary hover:underline" onClick={() => onChange(undefined)}>
-                  сбросить
-                </button>
-              )}
+              <span className="flex items-center gap-2">
+                {!allVisibleSelected && visibleValues.length > 0 && (
+                  <button className="text-primary hover:underline" onClick={selectAllVisible}>
+                    выбрать все
+                  </button>
+                )}
+                {hasFilter && (
+                  <button className="text-primary hover:underline" onClick={() => onChange(undefined)}>
+                    сбросить
+                  </button>
+                )}
+              </span>
             </div>
             {distinctValues.length > 6 && (
               <Input
