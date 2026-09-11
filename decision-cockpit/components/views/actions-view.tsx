@@ -23,7 +23,10 @@ export function ActionsView({ data }: { data: ParsedReport }) {
                   {row['Кто'] && <span>{String(row['Кто'])}</span>}
                 </div>
               </div>
-              <div className="shrink-0 font-bold text-emerald-600 dark:text-emerald-400">{fmtMoney(row['Эффект_тг'])}</div>
+              <div className="shrink-0 text-right">
+                <div className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Потенц. эффект</div>
+                <div className="font-bold text-emerald-600 dark:text-emerald-400">{fmtMoney(row['Эффект_тг'])}</div>
+              </div>
               <SimpleBadge text={String(row['Усилия'] ?? '')} />
             </Card>
           ))}

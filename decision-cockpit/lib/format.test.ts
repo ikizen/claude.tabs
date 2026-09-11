@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { fmtNumber, fmtMoney, fmtPercent, numericPrefix } from './format';
 
 describe('fmtNumber', () => {
-  it('форматирует число по русской локали', () => {
-    const expected = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(1234.5);
-    expect(fmtNumber(1234.5)).toBe(expected);
+  it('форматирует большие числа с разделителем-запятой между разрядами', () => {
+    expect(fmtNumber(1234.5)).toBe('1,234.5');
+    expect(fmtNumber(1234567)).toBe('1,234,567');
   });
 
   it('возвращает нечисловое значение как есть', () => {

@@ -1,9 +1,19 @@
+import { cn } from '@/lib/utils';
 import { KpiCard } from '@/components/kpi-card';
 import { DataTable, type DataTableColumn } from '@/components/data-table';
 import { StatusBadge, statusBarClass } from '@/components/status-badge';
-import { fmtMoney, fmtNumber } from '@/lib/format';
+import { fmtMoney, fmtNumber, fmtPercent } from '@/lib/format';
 import type { ParsedReport } from '@/lib/parse';
 import type { FlagAxis } from '@/lib/status-labels';
+
+// Показатели с "маржа"/"маржинальность" в названии в KPI приходят долей
+// (0.136), а не деньгами — показываем их в %, а не сырым числом.
+function kpiValueDisplay(label: string, value: unknown): string {
+  if (typeof value === 'number' && /марж/i.test(label) && Math.abs(value) <= 5) {
+    return fmtPercent(value);
+  }
+  return fmtNumber(value);
+}
 
 const FLAG_PLAQUES: { axis: FlagAxis; value: string; label: string; tone: string }[] = [
   { axis: 'dataQuality', value: 'CHECK DATA', label: 'позиций требуют проверки данных', tone: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200' },
@@ -60,7 +70,7 @@ export function OverviewView({
             <KpiCard
               key={i}
               label={String(row['Показатель'] ?? '')}
-              value={fmtNumber(row['Значение'])}
+              value={kpiValueDisplay(String(row['Показатель'] ?? ''), row['Значение'])}
               caption={row['Подпись'] as string}
               tone={row['Оценка'] === 'good' ? 'good' : row['Оценка'] === 'bad' ? 'bad' : 'neutral'}
             />
@@ -71,17 +81,71 @@ export function OverviewView({
       {data.productTree && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {FLAG_PLAQUES.map(({ axis, value, label, tone }) => {
-            const count = data.models.filter((r) => r[`flags_${axis}`] === value).length;
+            const rows = data.models.filter((r) => r[`flags_${axis}`] === value);
+            const count = rows.length;
+            const isPriceFix = axis === 'economics' && value === 'PRICE FIX';
+
+            if (!isPriceFix) {
+              return (
+                <button
+                  key={`${axis}:${value}`}
+                  onClick={() => onFilterModels?.(axis, value)}
+                  disabled={!onFilterModels}
+                  className={`rounded-lg border p-4 text-left transition-opacity ${tone} ${onFilterModels ? 'cursor-pointer hover:opacity-80' : ''}`}
+                >
+                  <div className="text-2xl font-bold">{count}</div>
+                  <div className="text-sm">{label}</div>
+                </button>
+              );
+            }
+
+            const unitsSum = rows.reduce((s, r) => s + (Number(r['Остаток_шт']) || 0), 0);
+            const valueSum = rows.reduce((s, r) => s + (Number(r['Остаток_тг']) || 0), 0);
+            const revenueSum = rows.reduce((s, r) => s + (Number(r['Выручка12']) || 0), 0);
+            const totalGp = rows.reduce((s, r) => s + (Number(r['ВП12']) || 0), 0);
+            const negativeGp = rows.reduce((s, r) => {
+              const gp = Number(r['ВП12']) || 0;
+              return gp < 0 ? s + gp : s;
+            }, 0);
+            const marginPlan = revenueSum !== 0 ? totalGp / revenueSum : null;
+
             return (
-              <button
-                key={`${axis}:${value}`}
-                onClick={() => onFilterModels?.(axis, value)}
-                disabled={!onFilterModels}
-                className={`rounded-lg border p-4 text-left transition-opacity ${tone} ${onFilterModels ? 'cursor-pointer hover:opacity-80' : ''}`}
-              >
-                <div className="text-2xl font-bold">{count}</div>
-                <div className="text-sm">{label}</div>
-              </button>
+              <div key={`${axis}:${value}`} className={cn('rounded-lg border p-4 lg:col-span-2', tone)}>
+                <button
+                  onClick={() => onFilterModels?.(axis, value)}
+                  disabled={!onFilterModels}
+                  className={cn('block w-full text-left', onFilterModels && 'cursor-pointer hover:opacity-80')}
+                >
+                  <div className="text-2xl font-bold">{count}</div>
+                  <div className="text-sm">{label}</div>
+                </button>
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 border-t border-current/15 pt-3 text-xs sm:grid-cols-3">
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt className="opacity-80">SKU</dt>
+                    <dd className="text-right font-semibold tabular-nums sm:mt-0.5">{fmtNumber(count)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt className="opacity-80">Штук</dt>
+                    <dd className="text-right font-semibold tabular-nums sm:mt-0.5">{fmtNumber(unitsSum)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt className="opacity-80">Сумма остатка</dt>
+                    <dd className="text-right font-semibold tabular-nums sm:mt-0.5">{fmtMoney(valueSum)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt className="opacity-80">План выручки, тек. цены</dt>
+                    <dd className="text-right font-semibold tabular-nums sm:mt-0.5">{fmtMoney(revenueSum)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt className="opacity-80">План отриц. прибыли</dt>
+                    <dd className="text-right font-semibold tabular-nums sm:mt-0.5">{fmtMoney(negativeGp)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2 sm:block">
+                    <dt className="opacity-80">План маржи</dt>
+                    <dd className="text-right font-semibold tabular-nums sm:mt-0.5">{marginPlan !== null ? fmtPercent(marginPlan) : '—'}</dd>
+                  </div>
+                </dl>
+              </div>
             );
           })}
         </div>

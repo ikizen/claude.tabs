@@ -4,7 +4,7 @@ import { fmtMoney, fmtNumber } from '@/lib/format';
 import type { ParsedReport } from '@/lib/parse';
 
 const FLAG_CLASS: Record<string, string> = {
-  'DATA ERROR': 'bg-red-600',
+  'CHECK DATA': 'bg-red-600',
   NEW: 'bg-sky-600',
   THIN: 'bg-amber-600',
   CENSORED: 'bg-violet-600',
@@ -47,9 +47,24 @@ export function DataQualityView({ data }: { data: ParsedReport }) {
       <h2 className="text-xl font-semibold">Качество данных</h2>
       <DataTable columns={columns} rows={data.dataquality} />
       <div className="rounded-lg border border-sky-300 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200">
-        Позиции с этими флагами выведены из автоматических решений. Суммарно это {fmtNumber(totalPositions)} позиций на{' '}
-        {fmtMoney(totalStock)}
-        {pct !== null && ` — ${pct.toFixed(1)}% капитала.`}
+        <p className="font-semibold">Как это считается, простыми словами</p>
+        <p className="mt-1">
+          Автоматические статусы (BUY MORE, HOLD, DISCOUNT и т.д.) в разделе «Модели» надёжны, только если у позиции достаточно истории продаж
+          и себестоимость не выглядит подозрительно. Эти флаги отмечают случаи, где это условие не выполняется — по ним решение принимается
+          вручную, а не по автоматическому статусу:
+        </p>
+        <ul className="mt-2 list-inside list-disc space-y-1">
+          {data.dataquality.map((r, i) => (
+            <li key={i}>
+              <b>{String(r['Флаг'] ?? '')}</b> — {String(r['Что означает'] ?? '')}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2">
+          Позиции с этими флагами выведены из автоматических решений. Суммарно это {fmtNumber(totalPositions)} позиций на{' '}
+          {fmtMoney(totalStock)}
+          {pct !== null && ` — ${pct.toFixed(1)}% капитала.`}
+        </p>
       </div>
     </div>
   );
