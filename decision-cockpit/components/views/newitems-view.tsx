@@ -5,6 +5,8 @@ import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { KpiCard } from '@/components/kpi-card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { DataTable, type DataTableColumn } from '@/components/data-table';
+import { SimpleBadge } from '@/components/status-badge';
 import { fmtMoney, fmtNumber } from '@/lib/format';
 import type { ParsedReport, ReportRow } from '@/lib/parse';
 
@@ -19,6 +21,15 @@ const RISK_BADGE: Record<string, string> = {
   'средний': 'bg-amber-600',
   'высокий': 'bg-red-600',
 };
+
+const NEWITEMS_LIST_COLUMNS: DataTableColumn[] = [
+  { key: 'Модель', header: 'Модель' },
+  { key: 'Категория', header: 'Категория', hideOnMobile: true },
+  { key: 'Остаток_шт', header: 'Остаток, шт', align: 'right', render: (r) => fmtNumber(r['Остаток_шт']) },
+  { key: 'Остаток_тг', header: 'Сумма', align: 'right', render: (r) => fmtMoney(r['Остаток_тг']) },
+  { key: 'Сезон_старт', header: 'Сезон, старт' },
+  { key: 'Риск', header: 'Риск', filterable: true, render: (r) => <SimpleBadge text={String(r['Риск'] ?? '')} /> },
+];
 
 const BUCKETS = [
   { label: 'Сезон идёт сейчас', test: (m: number) => m === 0 },
@@ -105,6 +116,9 @@ export function NewItemsView({ data }: { data: ParsedReport }) {
         </p>
         <p className="mt-2">Эти позиции не являются неликвидом. Их сезон ещё не наступил. Не включать их в списки на уценку до окончания их окна продаж.</p>
       </div>
+
+      <h3 className="text-sm font-medium text-muted-foreground">Все новинки одним списком, по сумме остатка</h3>
+      <DataTable columns={NEWITEMS_LIST_COLUMNS} rows={[...data.newitems].sort((a, b) => (Number(b['Остаток_тг']) || 0) - (Number(a['Остаток_тг']) || 0))} />
     </div>
   );
 }

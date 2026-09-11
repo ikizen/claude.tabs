@@ -47,16 +47,18 @@ export function DataQualityView({ data }: { data: ParsedReport }) {
       <h2 className="text-xl font-semibold">Качество данных</h2>
       <DataTable columns={columns} rows={data.dataquality} />
       <div className="rounded-lg border border-sky-300 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200">
-        <p className="font-semibold">Как это считается, простыми словами</p>
+        <p className="font-semibold">Что означает каждое значение, простыми словами</p>
         <p className="mt-1">
           Автоматические статусы (BUY MORE, HOLD, DISCOUNT и т.д.) в разделе «Модели» надёжны, только если у позиции достаточно истории продаж
-          и себестоимость не выглядит подозрительно. Эти флаги отмечают случаи, где это условие не выполняется — по ним решение принимается
-          вручную, а не по автоматическому статусу:
+          и себестоимость не выглядит подозрительно. Эта таблица отмечает случаи, где это условие не выполняется — по ним решение принимается
+          вручную, а не по автоматическому статусу. Колонки: <b>Флаг</b> — код причины; <b>Позиций</b> — сколько товарных позиций (SKU) им
+          отмечено; <b>Остаток</b> — их суммарная стоимость по себестоимости.
         </p>
         <ul className="mt-2 list-inside list-disc space-y-1">
           {data.dataquality.map((r, i) => (
             <li key={i}>
-              <b>{String(r['Флаг'] ?? '')}</b> — {String(r['Что означает'] ?? '')}
+              <b>{String(r['Флаг'] ?? '')}</b> ({fmtNumber(r['Позиций'])} поз., {fmtMoney(r['Остаток_тг'])}) — {String(r['Что означает'] ?? '')}.{' '}
+              Что делать: {String(r['Что делать'] ?? '')}.
             </li>
           ))}
         </ul>

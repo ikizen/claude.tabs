@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/card';
 import { SimpleBadge } from '@/components/status-badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { fmtMoney } from '@/lib/format';
 import type { ParsedReport } from '@/lib/parse';
 
@@ -23,13 +24,26 @@ export function ActionsView({ data }: { data: ParsedReport }) {
                   {row['Кто'] && <span>{String(row['Кто'])}</span>}
                 </div>
               </div>
-              <div className="shrink-0 text-right">
-                <div className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Потенц. эффект</div>
-                <div className="font-bold text-emerald-600 dark:text-emerald-400">{fmtMoney(row['Эффект_тг'])}</div>
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="shrink-0 cursor-help text-right">
+                    <div className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Потенц. эффект</div>
+                    <div className="font-bold text-emerald-600 dark:text-emerald-400">{fmtMoney(row['Эффект_тг'])}</div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Ожидаемая денежная отдача от этого конкретного действия за 7 дней — посчитана в отчёте (не на сайте) по группе «
+                  {String(row['Группа'] ?? '—')}».
+                </TooltipContent>
+              </Tooltip>
               <SimpleBadge text={String(row['Усилия'] ?? '')} />
             </Card>
           ))}
+          <div className="rounded-lg border border-sky-300 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200">
+            «Потенц. эффект» — ожидаемая денежная отдача за 7 дней от выполнения именно этого действия (например, высвобождение капитала
+            от уценки или экономия от остановки закупки). Считается в отчёте по факту продаж и остатков, сайт эти числа не пересчитывает,
+            только показывает и сортирует по убыванию.
+          </div>
         </div>
       )}
     </div>

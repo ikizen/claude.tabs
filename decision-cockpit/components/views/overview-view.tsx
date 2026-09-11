@@ -145,6 +145,10 @@ export function OverviewView({
                     <dd className="text-right font-semibold tabular-nums sm:mt-0.5">{marginPlan !== null ? fmtPercent(marginPlan) : '—'}</dd>
                   </div>
                 </dl>
+                <p className="mt-3 border-t border-current/15 pt-2 text-[11px] opacity-80">
+                  SKU — число разных моделей с этим флагом, штук — их суммарный остаток. План выручки/прибыли/маржи — сумма факта за 12
+                  мес по этим же моделям при нынешних (не пересмотренных) ценах, без пересчёта сайтом.
+                </p>
               </div>
             );
           })}

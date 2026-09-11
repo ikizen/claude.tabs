@@ -42,10 +42,20 @@ export function ClientsView({ data }: { data: ParsedReport }) {
     );
   }
 
-  const total = data.clients.length;
-  const churned = data.clients.filter((r) => r['Статус'] === 'ушёл').length;
-  const isNew = data.clients.filter((r) => r['Статус'] === 'новый').length;
-  const active = total - churned;
+  // Строки клиентов в файле могут быть выборкой (для крупных баз отчёт
+  // прикладывает не тысячи строк, а срез) — тогда канонические итоги
+  // (всего/ушли/новые) берём из "Удержание клиентов", а не считаем по
+  // показанной выборке, иначе цифры разъедутся между собой.
+  const shownCount = data.clients.length;
+  const totalRow = data.retention.find((r) => String(r['Показатель'] ?? '').includes('Клиентов в базе'));
+  const churnedRow = data.retention.find((r) => String(r['Показатель'] ?? '') === 'Ушли');
+  const newRow = data.retention.find((r) => String(r['Показатель'] ?? '') === 'Новые');
+
+  const total = totalRow ? Number(totalRow['Значение']) || 0 : shownCount;
+  const isSample = total > shownCount;
+  const churned = churnedRow ? Number(churnedRow['Значение']) || 0 : data.clients.filter((r) => r['Статус'] === 'ушёл').length;
+  const isNew = newRow ? Number(newRow['Значение']) || 0 : data.clients.filter((r) => r['Статус'] === 'новый').length;
+  const active = Math.max(total - churned, 0);
   const retentionRow = data.retention.find((r) => String(r['Показатель'] ?? '').includes('Выручка ушедших'));
   const churnedRevenue = retentionRow
     ? Number(retentionRow['Значение']) || 0
@@ -75,12 +85,19 @@ export function ClientsView({ data }: { data: ParsedReport }) {
       <h2 className="text-xl font-semibold">Клиенты</h2>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard label="Всего клиентов" value={fmtNumber(total)} caption="в загруженном срезе" />
+        <KpiCard label="Всего клиентов" value={fmtNumber(total)} caption="за 12 месяцев" />
         <KpiCard label="Активных" value={fmtNumber(active)} caption="не помечены как ушедшие" />
         <KpiCard label="Ушедших" value={fmtNumber(churned)} />
         <KpiCard label="Новых" value={fmtNumber(isNew)} />
         <KpiCard label="Оборот ушедших" value={fmtMoney(churnedRevenue)} caption="их оборот в прошлом периоде" />
       </div>
+
+      {isSample && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          В таблице ниже показано {fmtNumber(shownCount)} из {fmtNumber(total)} клиентов — это выборка, приложенная к отчёту, не вся база.
+          Показатели выше (всего/активных/ушедших/новых) считаются по полной базе из раздела «Удержание клиентов», а не по этой выборке.
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Input placeholder="Поиск по клиенту…" value={query} onChange={(e) => setQuery(e.target.value)} className="max-w-xs" />
