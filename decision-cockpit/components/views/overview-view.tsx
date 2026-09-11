@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { KpiCard } from '@/components/kpi-card';
 import { DataTable, type DataTableColumn } from '@/components/data-table';
 import { StatusBadge, statusBarClass } from '@/components/status-badge';
-import { fmtMoney, fmtNumber, fmtPercent } from '@/lib/format';
+import { fmtEmbeddedNumbers, fmtMoney, fmtNumber, fmtPercent } from '@/lib/format';
 import type { ParsedReport } from '@/lib/parse';
 import type { FlagAxis } from '@/lib/status-labels';
 
@@ -71,7 +71,7 @@ export function OverviewView({
               key={i}
               label={String(row['Показатель'] ?? '')}
               value={kpiValueDisplay(String(row['Показатель'] ?? ''), row['Значение'])}
-              caption={row['Подпись'] as string}
+              caption={fmtEmbeddedNumbers(row['Подпись'])}
               tone={row['Оценка'] === 'good' ? 'good' : row['Оценка'] === 'bad' ? 'bad' : 'neutral'}
             />
           ))}

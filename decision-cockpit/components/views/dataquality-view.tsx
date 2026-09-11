@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { DataTable, type DataTableColumn } from '@/components/data-table';
-import { fmtMoney, fmtNumber } from '@/lib/format';
+import { fmtEmbeddedNumbers, fmtMoney, fmtNumber } from '@/lib/format';
 import type { ParsedReport } from '@/lib/parse';
 
 const FLAG_CLASS: Record<string, string> = {
@@ -38,8 +38,8 @@ export function DataQualityView({ data }: { data: ParsedReport }) {
     },
     { key: 'Позиций', header: 'Позиций', align: 'right', render: (r) => fmtNumber(r['Позиций']) },
     { key: 'Остаток_тг', header: 'Остаток', align: 'right', render: (r) => fmtMoney(r['Остаток_тг']) },
-    { key: 'Что означает', header: 'Что означает' },
-    { key: 'Что делать', header: 'Что делать' },
+    { key: 'Что означает', header: 'Что означает', render: (r) => fmtEmbeddedNumbers(r['Что означает']) },
+    { key: 'Что делать', header: 'Что делать', render: (r) => fmtEmbeddedNumbers(r['Что делать']) },
   ];
 
   return (
@@ -57,8 +57,8 @@ export function DataQualityView({ data }: { data: ParsedReport }) {
         <ul className="mt-2 list-inside list-disc space-y-1">
           {data.dataquality.map((r, i) => (
             <li key={i}>
-              <b>{String(r['Флаг'] ?? '')}</b> ({fmtNumber(r['Позиций'])} поз., {fmtMoney(r['Остаток_тг'])}) — {String(r['Что означает'] ?? '')}.{' '}
-              Что делать: {String(r['Что делать'] ?? '')}.
+              <b>{String(r['Флаг'] ?? '')}</b> ({fmtNumber(r['Позиций'])} поз., {fmtMoney(r['Остаток_тг'])}) — {fmtEmbeddedNumbers(r['Что означает'])}.{' '}
+              Что делать: {fmtEmbeddedNumbers(r['Что делать'])}.
             </li>
           ))}
         </ul>

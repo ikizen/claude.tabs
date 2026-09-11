@@ -7,7 +7,7 @@ import { KpiCard } from '@/components/kpi-card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DataTable, type DataTableColumn } from '@/components/data-table';
 import { SimpleBadge } from '@/components/status-badge';
-import { fmtMoney, fmtNumber } from '@/lib/format';
+import { fmtEmbeddedNumbers, fmtMoney, fmtNumber } from '@/lib/format';
 import type { ParsedReport, ReportRow } from '@/lib/parse';
 
 const RISK_DOT: Record<string, string> = {
@@ -48,7 +48,7 @@ function NewItemRow({ row }: { row: ReportRow }) {
           <span className="font-medium">{String(row['Модель'] ?? '')}</span>
           <span className="text-xs text-muted-foreground">{String(row['Категория'] ?? '')}</span>
         </div>
-        {row['Комментарий'] && <div className="text-xs text-muted-foreground">{String(row['Комментарий'])}</div>}
+        {row['Комментарий'] && <div className="text-xs text-muted-foreground">{fmtEmbeddedNumbers(row['Комментарий'])}</div>}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-sm sm:justify-end">
         <span className="tabular-nums text-muted-foreground">

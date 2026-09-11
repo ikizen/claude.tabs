@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { fmtEmbeddedNumbers } from '@/lib/format';
 import type { ParsedReport, ReportRow } from '@/lib/parse';
 
 const COLUMNS = ['Предложено', 'К работе', 'В работе', 'Готово'] as const;
@@ -135,13 +136,13 @@ export function TasksView({ data }: { data: ParsedReport }) {
                     <span
                       className={cn('absolute top-2 bottom-2 left-0 w-1 rounded-full', PRIORITY_CLASS[String(item.row['Приоритет'])] ?? 'bg-slate-400')}
                     />
-                    <div className="mb-1.5 text-sm font-semibold">{String(item.row['Задача'] ?? '')}</div>
+                    <div className="mb-1.5 text-sm font-semibold">{fmtEmbeddedNumbers(item.row['Задача'])}</div>
                     <div className="mb-1.5 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                       {item.row['Кто'] && <span>{String(item.row['Кто'])}</span>}
                       {item.row['Срок'] && <span>{String(item.row['Срок'])}</span>}
                     </div>
                     {item.row['Комментарий'] && (
-                      <div className="mb-2 text-xs text-muted-foreground">{String(item.row['Комментарий'])}</div>
+                      <div className="mb-2 text-xs text-muted-foreground">{fmtEmbeddedNumbers(item.row['Комментарий'])}</div>
                     )}
                     <Label className="text-xs">
                       <Checkbox

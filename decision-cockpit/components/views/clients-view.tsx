@@ -7,7 +7,7 @@ import { KpiCard } from '@/components/kpi-card';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { DataTable, type DataTableColumn } from '@/components/data-table';
-import { fmtMoney, fmtNumber, fmtPercent } from '@/lib/format';
+import { fmtEmbeddedNumbers, fmtMoney, fmtNumber, fmtPercent } from '@/lib/format';
 import type { ParsedReport } from '@/lib/parse';
 
 const STATUSES = ['растёт', 'стабилен', 'падает', 'новый', 'ушёл'];
@@ -118,7 +118,7 @@ export function ClientsView({ data }: { data: ParsedReport }) {
           <h3 className="text-sm font-medium text-muted-foreground">Отток</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {data.retention.map((r, i) => (
-              <KpiCard key={i} label={String(r['Показатель'] ?? '')} value={fmtNumber(r['Значение'])} caption={String(r['Подпись'] ?? '')} />
+              <KpiCard key={i} label={String(r['Показатель'] ?? '')} value={fmtNumber(r['Значение'])} caption={fmtEmbeddedNumbers(r['Подпись'])} />
             ))}
           </div>
         </>

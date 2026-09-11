@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import { fmtEmbeddedNumbers } from '@/lib/format';
 import type { ParsedReport } from '@/lib/parse';
 
 export function NarrativeView({ data }: { data: ParsedReport }) {
@@ -10,7 +11,7 @@ export function NarrativeView({ data }: { data: ParsedReport }) {
       ) : (
         <div
           className="prose prose-sm dark:prose-invert max-w-none rounded-xl border bg-card p-6"
-          dangerouslySetInnerHTML={{ __html: marked.parse(data.narrative) as string }}
+          dangerouslySetInnerHTML={{ __html: marked.parse(fmtEmbeddedNumbers(data.narrative)) as string }}
         />
       )}
     </div>

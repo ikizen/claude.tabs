@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { SimpleBadge } from '@/components/status-badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { fmtMoney } from '@/lib/format';
+import { fmtEmbeddedNumbers, fmtMoney } from '@/lib/format';
 import type { ParsedReport } from '@/lib/parse';
 
 export function ActionsView({ data }: { data: ParsedReport }) {
@@ -18,7 +18,7 @@ export function ActionsView({ data }: { data: ParsedReport }) {
             <Card key={i} className="flex-row items-center gap-4 p-4">
               <div className="w-8 shrink-0 font-bold text-muted-foreground">#{String(row['Приоритет'] ?? '')}</div>
               <div className="min-w-0 flex-1">
-                <div className="font-semibold">{String(row['Действие'] ?? '')}</div>
+                <div className="font-semibold">{fmtEmbeddedNumbers(row['Действие'])}</div>
                 <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
                   {row['Группа'] && <span>{String(row['Группа'])}</span>}
                   {row['Кто'] && <span>{String(row['Кто'])}</span>}

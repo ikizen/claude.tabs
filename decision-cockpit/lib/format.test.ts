@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fmtNumber, fmtMoney, fmtPercent, numericPrefix } from './format';
+import { fmtNumber, fmtMoney, fmtPercent, numericPrefix, fmtEmbeddedNumbers } from './format';
 
 describe('fmtNumber', () => {
   it('форматирует большие числа с разделителем-запятой между разрядами', () => {
@@ -34,6 +34,26 @@ describe('fmtPercent', () => {
 
   it('возвращает нечисловое значение как есть', () => {
     expect(fmtPercent('—')).toBe('—');
+  });
+});
+
+describe('fmtEmbeddedNumbers', () => {
+  it('расставляет разделители в крупных числах внутри свободного текста', () => {
+    expect(fmtEmbeddedNumbers('ВП 248571061 при расходах 252000000')).toBe('ВП 248,571,061 при расходах 252,000,000');
+  });
+
+  it('не трогает год и короткие числа', () => {
+    expect(fmtEmbeddedNumbers('Сезон стартует в 2026, дней хватит на 90')).toBe('Сезон стартует в 2026, дней хватит на 90');
+  });
+
+  it('не трогает уже отформатированные числа с десятичной точкой', () => {
+    expect(fmtEmbeddedNumbers('дней, 1.52 раза в год')).toBe('дней, 1.52 раза в год');
+  });
+
+  it('терпимо относится к нестроковым и пустым значениям', () => {
+    expect(fmtEmbeddedNumbers(undefined)).toBe('');
+    expect(fmtEmbeddedNumbers(null)).toBe('');
+    expect(fmtEmbeddedNumbers(42)).toBe('42');
   });
 });
 
